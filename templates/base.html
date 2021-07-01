@@ -1,0 +1,23 @@
+<!DOCTYPE HTML>
+<html lang="ru-RU">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Auto tornaments for Lichess{% end %}</title>
+    <link rel="stylesheet" href="{{ static_url('css/style.css') }}">
+    {% block head %} {% end %}
+</head>
+<body>
+  <main>
+    <div class="content">
+      {% block content %}{% end %}
+    </div>
+  </main>
+  <footer>
+    <ul>
+      <li><span>© Rostislav Kondratenko, 2021</span></li>
+    </ul>
+  </footer>
+{% block script %}{% end %}
+</body>
+</html>
