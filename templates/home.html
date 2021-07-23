@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Tournament templates</h1>
+{% for template in templates %}
+<div class="template_box">
+  <h3 class="template_name">{{ template['name'] }}</h3> <span class="template_type">{{ template['type'] }}</span>
+  {% if template.get('tournaments') %}
+  <ol class="tournamet_list">
+    {% for tournament in template['tournaments'] %}
+      <li class="tounament_short">{{ tournament['type'] }} | {{ tournament['name'] }} | {{ tournament['time'] }}{% if tournament['private'] %} | Private{% end %}</li>
+    {% end %}
+  </ol>
+  <a href="/create"><button class="create">Create tournaments on Lichess</button></a>
+  {% else %}
+  <p class="notice">
+    No tournaments
+  </p>
+  {% end %}
+  <a href="/add"><button class="add">Add tournament template</button></a>
+</div>
+{% end %}
+
+{% end %}

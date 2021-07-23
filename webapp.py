@@ -19,105 +19,19 @@ from tornado.httpclient import AsyncHTTPClient
 from tornado.options import define, options, parse_config_file, parse_command_line
 import tornado.escape
 
+from lichessapi import LichessAPI
+from basehandler import BaseHandler
+
 from version import __version__, __revision__
 
 base_path = os.path.abspath(os.path.dirname(__file__))
 os.chdir(base_path)
 
 
-class LichessAPI():
-    _OAUTH_AUTHORIZE_URL = 'https://lichess.org/oauth'
-    _OAUTH_ACCESS_TOKEN_URL = 'https://lichess.org/api/token'
-    _ACCOUNT_URL = 'https://lichess.org/api/account'
-    _EMAIL_URL = 'https://lichess.org/api/account/email'
-
-    def __init__(self, client_id: str, redirect_uri: str):
-        self.client_id = client_id
-        self.redirect_uri = redirect_uri
-        self.http = AsyncHTTPClient(force_instance=True)
-
-    def __del__(self) -> None:
-        self.http.close()
-
-    def get_authorize_url(self,  scope: List[str], state: Optional[str] = None) -> Tuple[str, str]:
-        code_verifier = token_urlsafe(64)
-        # Have to trim the trailing =
-        code_challenge = urlsafe_b64encode(sha256(code_verifier.encode('ascii')).digest()).decode().strip('=')
-        args = {
-            'response_type': 'code',
-            'redirect_uri': self.redirect_uri,
-            'client_id': self.client_id,
-            'scope': " ".join(scope),
-            'code_challenge': code_challenge,
-            'code_challenge_method': 'S256'
-        }
-        if state is not None:
-            args['state'] = state
-        return f'{self._OAUTH_AUTHORIZE_URL}/?{urlencode(args)}', code_verifier
-
-    async def get_access_token(self, code: str, code_verifier: str) -> str:
-        res = await self.http.fetch(
-            self._OAUTH_ACCESS_TOKEN_URL,
-            method='POST',
-            headers={
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body=urlencode({
-                'grant_type': 'authorization_code',
-                'code': code,
-                'code_verifier': code_verifier,
-                'redirect_uri': f'{options.base_url}/login',
-                'client_id': options.lichess_client_id
-            }),
-            raise_error=False)
-        if res.code == 200:
-            return cast(str, loads(res.body.decode())['access_token'])
-        elif res.code == 400:
-            raise RuntimeError(f"Bad Lichess Request: {res.body.decode() if res.body else ''}")
-        else:
-            raise RuntimeError(f"Error in Lichess Request: {res.code} {res.body.decode() if res.body else ''}")
-
-    async def get_current_user(self, token: str) -> Dict[str, Any]:
-        account_request = self.http.fetch(
-            self._ACCOUNT_URL,
-            method='GET',
-            headers={
-                'Authorization': f' Bearer {token}'
-            })
-        email_request = self.http.fetch(
-            self._EMAIL_URL,
-            method='GET',
-            headers={
-                'Authorization': f' Bearer {token}'
-            })
-        user, email = [loads(res.body.decode()) for res in await gather(account_request, email_request)]
-        user.update(email)
-        return cast(Dict[str, Any], user)
-
-
-class BaseHandler(tornado.web.RequestHandler):
-    @property
-    def lichess(self) -> LichessAPI:
-        return cast(LichessAPI, self.settings['lichess'])
-
-    async def prepare(self) -> None:
-        token = (self.get_secure_cookie('t') or b'').decode()
-        if token:
-            try:
-                self._current_user = await self.lichess.get_current_user(token)
-            except Exception as e:
-                logging.warning(f"Cannot get current user: {e}")
-                self.clear_cookie('t')
-
-    def get_login_url(self) -> str:
-        return "/login"
-
-
 class HomeHandler(BaseHandler):
-
     @tornado.web.authenticated
     def get(self) -> None:
-        self.write(str(self.current_user))
+        self.render('home.html')
 
 
 class LoginHandler(BaseHandler):
