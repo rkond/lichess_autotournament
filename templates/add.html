@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Add tournament template</h1>
+<form action="" method="POST">
+<label for="tournament">Template tournament URL</label>
+<input type="url" id="tournament" name="tournament" placeholder="https://lichess.org/tournament/XXXXXXXX" size="40">
+<br><label for="rated">Rated</label>
+<input type="checkbox" id="rated" name="rated" checked>
+<br><label for="streakable">Streakable</label>
+<input type="checkbox" id="streakable" name="streakable" checked>
+<br><label for="berserkable">Berserkable</label>
+<input type="checkbox" id="berserkable" name="berserkable" checked>
+<br><label for="team">Limit to team ID:</label>
+<input type="text" id="team" name="team">
+<br><label for="chat">Chat</label>
+<input type="checkbox" id="chat" name="chat" checked>
+<br><label for="password">Password</label>
+<input type="password" id="password" name="password" checked>
+<br><label for="min_rating">Min rating</label>
+<input type="number" name="min_rating" id="min_rating" size="4">
+<br><label for="max_rating">Max rating</label>
+<input type="number" name="max_rating" id="max_rating" size="4">
+<br><label for="rated_games">Min number of rated games</label>
+<input type="number" name="rated_games" id="rated_games" size="4">
+<br><input type="submit" name="add" value="Add template">
+{% module xsrf_form_html() %}
+</form>
+{% end %}

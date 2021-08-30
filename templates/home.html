@@ -2,23 +2,36 @@
 
 {% block content %}
 <h1>Tournament templates</h1>
-{% for template in templates %}
+{% if templates %}
+<ol class="template_list">
 <div class="template_box">
-  <h3 class="template_name">{{ template['name'] }}</h3> <span class="template_type">{{ template['type'] }}</span>
-  {% if template.get('tournaments') %}
-  <ol class="tournamet_list">
-    {% for tournament in template['tournaments'] %}
-      <li class="tounament_short">{{ tournament['type'] }} | {{ tournament['name'] }} | {{ tournament['time'] }}{% if tournament['private'] %} | Private{% end %}</li>
+    {% for tournament in templates %}
+      <li class="tournament_short">
+      {{ tournament['type'] }} |
+      {{ tournament['name'] }} |
+      {{ tournament['minutes'] }} min
+      {% if tournament.get('password') %} | Private{% end %}
+      | {{ datetime.fromtimestamp(tournament['startDate']).strftime("%A %H:%M") }}</li>
     {% end %}
-  </ol>
-  <a href="/create"><button class="create">Create tournaments on Lichess</button></a>
-  {% else %}
-  <p class="notice">
-    No tournaments
-  </p>
-  {% end %}
-  <a href="/add"><button class="add">Add tournament template</button></a>
 </div>
+</ol>
+{% else %}
+<p class="notice">
+  No tournaments
+</p>
 {% end %}
-
+<a href="/add"><button class="add">Add tournament template</button></a>
+{% if templates %}
+<form action="/create" method="POST">
+  <label for="week">Week</label> <select name="week" id="week">
+    {% for week_no in range(4) %}
+      {% set week_start = next_monday + timedelta(days=7*week_no)%}
+      {% set week_end = week_start + timedelta(days=6)%}
+      <option value="{{week_start.timestamp()}}" {% if not week_no %}selected{%end%}>{{week_start.strftime("%d %B %Y")}} — {{week_end.strftime("%d %B %Y")}}</option>
+    {% end %}
+  </select>
+  <button type="submit" class="create">Create tournaments on Lichess</button></a>
+  {% module xsrf_form_html() %}
+</form>
+{% end %}
 {% end %}

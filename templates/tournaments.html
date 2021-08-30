@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Created tournaments</h1>
+{% if tournaments %}
+<ol class="tournament_list">
+<div class="tournament_box">
+    {% for template, tournament in tournaments %}
+      <li class="tournament_short">
+      https://lichess.org/{{'tournament' if template['type']=='arena' else 'swiss'}}/{{ tournament['id'] }} |
+      {{ tournament['fullName'] }} |
+      {{ tournament['minutes'] }} min
+      {% if template['password'] %} | password: {{ template['password'] }}{% end %}
+      | {{ datetime.datetime.fromisoformat(tournament['startsAt'].strip('Z')).strftime("%d %B %Y %H:%M") }} UTC</li>
+    {% end %}
+</div>
+</ol>
+{% else %}
+<p class="notice">
+  No tournaments
+</p>
+{% end %}
+<a href="/"Return to home page</a>
+{% end %}
