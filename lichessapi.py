@@ -128,7 +128,6 @@ class LichessAPI():
                 if isinstance(v, bool):
                     template_dict[k] = str(v).lower()
             template_dict['clockTime'] = f'{template_dict["clockTime"]/60:.1f}'
-            print(template_dict)
             return cast(Dict[str, Any], await self._make_request(
                 f'{self.ARENA_URL}',
                 method='POST',

@@ -1,2 +1,13 @@
-.template_box {
+.copyright {
+    margin: 0 auto;
 }
+
+.github img {
+    height: 1em;
+}
+
+footer {
+    margin: 1em auto;
+    text-align: center;
+}
+

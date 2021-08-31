@@ -140,7 +140,8 @@ class CreateHandler(BaseHandler):
                     del template['conditions.nbRatedGame.nb']
                 if not template['password']:
                     del template['password']
-                start_date = datetime.fromtimestamp(template['startDate'])
+
+                start_date = datetime.fromtimestamp(template['startDate'] - (template['startDate'] % 60))
                 start_offset = get_next_monday(start_date) - start_date
                 template['startDate'] = int((get_next_monday(week) - start_offset).timestamp())*1000
             templates.append(template)
@@ -151,14 +152,40 @@ class CreateHandler(BaseHandler):
             r.update({
                 'user': self.current_user['id'],
                 'tournament_set': 'default',
-                'template': t.get('id')
+                'template': t.get('id'),
+                'created': datetime.utcnow().timestamp()
             })
         table = self.db.table('tournaments')
         table.insert_multiple(res)
-        print(res)
         self.render(
             'tournaments.html',
             tournaments=zip(tournaments, res)
+        )
+
+
+class DeleteHandler(BaseHandler):
+    @tornado.web.authenticated
+    async def get(self, id: str) -> None:
+        self.check_xsrf_cookie()
+        T = Query()
+        table = self.db.table('templates')
+        res = table.remove((T.user == self.current_user['id']) & (T.tournament_set == 'default') & (T.id == id))
+        print(res)
+        self.redirect("/")
+
+
+class TournamentsHandler(BaseHandler):
+    @tornado.web.authenticated
+    async def get(self) -> None:
+        T = Query()
+        table = self.db.table('templates')
+        templates = table.search((T.user == self.current_user['id']) & (T.tournament_set == 'default'))
+        table = self.db.table('tournaments')
+        tournaments = table.search((T.user == self.current_user['id']) & (T.tournament_set == 'default'))
+        templates_dict = dict((t['id'], t) for t in templates)
+        self.render(
+            'tournaments.html',
+            tournaments=[(templates_dict.get(t['template']), t) for t in tournaments if templates_dict.get(t['template'])]
         )
 
 
@@ -228,7 +255,9 @@ urls = [
     (r"/static/(.*)", tornado.web.StaticFileHandler, {"path": options.static_path}),
     (r"/", HomeHandler),
     (r"/add", AddHandler),
+    (r"/delete/(.*)", DeleteHandler),
     (r"/create", CreateHandler),
+    (r"/tournaments", TournamentsHandler),
     (r"/login", LoginHandler),
 ]
 application = tornado.web.Application(urls, **settings)  # type: ignore [arg-type]
