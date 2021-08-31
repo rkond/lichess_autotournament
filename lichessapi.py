@@ -75,7 +75,6 @@ class LichessAPI():
         return f'{self._OAUTH_AUTHORIZE_URL}/?{urlencode(args)}', code_verifier
 
     async def get_access_token(self, code: str, code_verifier: str) -> str:
-        print(f"CV: {code_verifier}")
         return cast(str, (await self._make_request(
             self._OAUTH_ACCESS_TOKEN_URL,
             method='POST',

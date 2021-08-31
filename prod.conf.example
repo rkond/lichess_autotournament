@@ -1,0 +1,7 @@
+logging='debug'
+debug=False
+cookie_secret='CHANGE_THIS_IN_PRODUCTION'
+db_dir='/var/lib/lichess'
+lichess_client_id='CHANGE_THIS_IN_PRODUCTION'
+team_id='imatran-shakki-online-chess-club'
+base_url='https://lichess.example.com'
