@@ -11,7 +11,7 @@
       {{ tournament['name'] }} |
       {{ tournament['minutes'] }} min
       {% if tournament.get('password') %} | Private{% end %}
-      | {{ datetime.fromtimestamp(tournament['startDate']).strftime("%A %H:%M") }}
+      | {{ datetime.fromtimestamp(tournament['startDate']).strftime("%A %H:%M") UTC }}
       <a href="/delete/{{ tournament['id'] }}?_xsrf={{url_escape(xsrf_token)}}">Remove</a></li>
     {% end %}
 </div>
@@ -27,8 +27,8 @@
 <h1>Create tournaments</h1>
 <form action="/create" method="POST">
   <label for="week">Week:</label> <select name="week" id="week">
-    {% for week_no in range(4) %}
-      {% set week_start = next_monday + timedelta(days=7*week_no)%}
+    {% for week_no in range(5) %}
+      {% set week_start = this_monday + timedelta(days=7*week_no)%}
       {% set week_end = week_start + timedelta(days=6)%}
       <option value="{{week_start.timestamp()}}" {% if not week_no %}selected{%end%}>{{week_start.strftime("%d %B %Y")}} — {{week_end.strftime("%d %B %Y")}}</option>
     {% end %}

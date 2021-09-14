@@ -28,8 +28,8 @@ base_path = os.path.abspath(os.path.dirname(__file__))
 os.chdir(base_path)
 
 
-def get_next_monday(d: datetime) -> datetime:
-    monday = d + timedelta(days=(7 - d.weekday()))
+def get_this_monday(d: datetime) -> datetime:
+    monday = d + timedelta(days=-d.weekday())
     return datetime(monday.year, monday.month, monday.day)
 
 
@@ -51,7 +51,7 @@ class HomeHandler(BaseHandler):
             tournaments=tournaments,
             datetime=datetime,
             timedelta=timedelta,
-            next_monday=get_next_monday(datetime.utcnow()),
+            this_monday=get_this_monday(datetime.utcnow()),
             xsrf_token=self.xsrf_token
             )
 
@@ -129,6 +129,7 @@ class CreateHandler(BaseHandler):
         table = self.db.table('templates')
         tournaments = table.search((T.user == self.current_user['id']) & (T.tournament_set == 'default'))
         templates = []
+        errors = []
         for tournament in tournaments:
             template = dict(tournament)
             if template['type'] == 'arena':
@@ -142,10 +143,13 @@ class CreateHandler(BaseHandler):
                     del template['password']
 
                 start_date = datetime.fromtimestamp(template['startDate'] - (template['startDate'] % 60))
-                start_offset = get_next_monday(start_date) - start_date
-                template['startDate'] = int((get_next_monday(week) - start_offset).timestamp())*1000
+                start_offset = start_date - get_this_monday(start_date)
+                tournamentStart = get_this_monday(week) + start_offset
+                if tournamentStart <= datetime.utcnow():
+                    errors.append(f"Cannot create tournament {template['name']} as it would start in the past")
+                    continue
+                template['startDate'] = int(tournamentStart.timestamp())*1000
             templates.append(template)
-            print(template)
         req = [self.lichess.create_tournament(self.token, template['type'], template) for template in templates]
         res = await gather(*req)
         for t, r in zip(tournaments, res):
@@ -159,6 +163,7 @@ class CreateHandler(BaseHandler):
         table.insert_multiple(res)
         self.render(
             'tournaments.html',
+            errors=errors,
             tournaments=zip(tournaments, res)
         )
 
@@ -185,6 +190,7 @@ class TournamentsHandler(BaseHandler):
         templates_dict = dict((t['id'], t) for t in templates)
         self.render(
             'tournaments.html',
+            errors=[],
             tournaments=[(templates_dict.get(t['template']), t) for t in tournaments if templates_dict.get(t['template'])]
         )
 
