@@ -11,7 +11,7 @@
       {{ tournament['name'] }} |
       {{ tournament['minutes'] }} min
       {% if tournament.get('password') %} | Private{% end %}
-      | {{ datetime.fromtimestamp(tournament['startDate']).strftime("%A %H:%M") UTC }}
+      | {{ datetime.utcfromtimestamp(tournament['startDate']).strftime("%A %H:%M") }} UTC
       <a href="/delete/{{ tournament['id'] }}?_xsrf={{url_escape(xsrf_token)}}">Remove</a></li>
     {% end %}
 </div>

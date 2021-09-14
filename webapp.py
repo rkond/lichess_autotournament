@@ -6,7 +6,7 @@ from asyncio import gather
 from urllib.parse import urlsplit
 from secrets import token_urlsafe
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from typing import cast
 
@@ -97,7 +97,8 @@ class AddHandler(BaseHandler):
                 'clockTime': tournament.get('clock', {}).get('limit'),
                 'clockIncrement': tournament.get('clock', {}).get('increment'),
                 'minutes': tournament.get('minutes'),
-                'startDate': datetime.fromisoformat(tournament.get('startsAt').strip('Z')).timestamp(),
+                'startDate': datetime.fromisoformat(tournament.get('startsAt').strip('Z')).\
+                replace(tzinfo=timezone.utc).timestamp(),
                 'variant': tournament.get('variant'),
                 'rated': bool(self.get_argument('rated', False)),
                 'berserkable': bool(self.get_argument('berserkable', False)),
@@ -124,7 +125,7 @@ class AddHandler(BaseHandler):
 class CreateHandler(BaseHandler):
     @tornado.web.authenticated
     async def post(self) -> None:
-        week = datetime.fromtimestamp(float(self.get_argument('week')))
+        week = datetime.utcfromtimestamp(float(self.get_argument('week')))
         T = Query()
         table = self.db.table('templates')
         tournaments = table.search((T.user == self.current_user['id']) & (T.tournament_set == 'default'))
@@ -142,7 +143,7 @@ class CreateHandler(BaseHandler):
                 if not template['password']:
                     del template['password']
 
-                start_date = datetime.fromtimestamp(template['startDate'] - (template['startDate'] % 60))
+                start_date = datetime.utcfromtimestamp(template['startDate'] - (template['startDate'] % 60))
                 start_offset = start_date - get_this_monday(start_date)
                 tournamentStart = get_this_monday(week) + start_offset
                 if tournamentStart <= datetime.utcnow():
