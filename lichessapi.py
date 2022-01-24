@@ -15,6 +15,7 @@ class LichessAPI():
     _OAUTH_ACCESS_TOKEN_URL = 'https://lichess.org/api/token'
     _ACCOUNT_URL = 'https://lichess.org/api/account'
     _EMAIL_URL = 'https://lichess.org/api/account/email'
+    _USER_TEAMS_URL = 'https://lichess.org/api/team/of'
 
     ARENA_URL = 'https://lichess.org/api/tournament'
     TEAM_URL = 'https://lichess.org/api/team'
@@ -102,6 +103,12 @@ class LichessAPI():
         user, email = [loads(res.body.decode()) for res in await gather(account_request, email_request)]
         user.update(email)
         return cast(Dict[str, Any], user)
+
+    async def get_user_teams(self, token: str, username: str) -> Dict[str, Any]:
+        return cast(Dict[str, Any], await self._make_request(
+            f'{self._USER_TEAMS_URL}/{username}',
+            method='GET',
+            token='token'))
 
     async def get_tournament(self, token: str, type: str, id: str, team_id: str = '') -> Dict[str, Any]:
         if type == 'arena':

@@ -61,6 +61,10 @@ class AddHandler(BaseHandler):
     async def get(self) -> None:
         self.render(
             'add.html',
+            teams=(
+                team for team in 
+                await self.lichess.get_user_teams(self.token, self.current_user['username'])
+                if any(self.current_user['id'] == leader['id'] for leader in team['leaders'])),
             errors=[]
             )
 
@@ -72,7 +76,7 @@ class AddHandler(BaseHandler):
             errors.append('No tournament URL')
             self.render('add.html', errors=errors)
             return
-        cheme, netloc, path, query, fragment = urlsplit(template_tournament_url)
+        scheme, netloc, path, query, fragment = urlsplit(template_tournament_url)
         paths = path.split('/')
         if netloc != 'lichess.org' or len(paths) < 2:
             errors.append('Invalid tournament URL')

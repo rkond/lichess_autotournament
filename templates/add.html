@@ -12,8 +12,13 @@
 <input type="checkbox" id="streakable" name="streakable" checked>
 <br><label for="berserkable">Berserkable</label>
 <input type="checkbox" id="berserkable" name="berserkable" checked>
-<br><label for="team">Limit to team ID:</label>
-<input type="text" id="team" name="team">
+<br><label for="team">Restrict to team members of:</label>
+<select id="team" name="team">
+<option value="">No restriction</option>
+{% for team in teams %}
+    <option value="{{team['id']}}">{{team['name']}}</option>
+{% end %}
+</select>
 <br><label for="chat">Chat</label>
 <input type="checkbox" id="chat" name="chat" checked>
 <br><label for="password">Password</label>
