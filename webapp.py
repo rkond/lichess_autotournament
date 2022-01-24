@@ -19,7 +19,7 @@ import tornado.escape
 
 from tinydb import TinyDB, Query
 
-from lichessapi import LichessAPI
+from lichessapi import LichessAPI, LichessError
 from basehandler import BaseHandler
 
 from version import __version__, __revision__
@@ -156,7 +156,16 @@ class CreateHandler(BaseHandler):
                 template['startDate'] = int(tournamentStart.timestamp())*1000
             templates.append(template)
         req = [self.lichess.create_tournament(self.token, template['type'], template) for template in templates]
-        res = await gather(*req)
+        try:
+            res = await gather(*req)
+        except LichessError as err:
+            errors.append(err.message)
+            self.render(
+                'tournaments.html',
+                errors=errors,
+                tournaments=[]
+            )
+            return
         for t, r in zip(tournaments, res):
             r.update({
                 'user': self.current_user['id'],

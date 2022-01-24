@@ -6,6 +6,13 @@
     height: 1em;
 }
 
+.error {
+    color: red;
+    background-color: #b0e7f0;
+    width: fit-content;
+    padding: .2em 1em;
+}
+
 footer {
     margin: 1em auto;
     text-align: center;

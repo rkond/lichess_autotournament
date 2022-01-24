@@ -3,8 +3,13 @@
 {% block content %}
 <h1>Created tournaments</h1>
 <a href="/">&lt; Back</a>
+{% if errors %}
+<h3>Some tournaments were not created</h3>
+<p>Check <a href="https://lichess.org/@/{{current_user['id']}}/tournaments/created">your tournament page</a> to see if some were created.</p>
+<p>Errors are:</p>
 {% for error in errors %}
   <p class="error">{{ error }}</p>
+{% end %}
 {% end %}
 {% if tournaments %}
 <ol class="tournament_list">
