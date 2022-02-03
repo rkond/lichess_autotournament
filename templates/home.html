@@ -39,4 +39,11 @@
 {% end %}
 <hr>
 <a href="/tournaments"> Previously created </a>
+<h1>Diploma templates</h1>
+{% for diploma in diploma_templates %}
+
+{% else %}
+<p>No templates</p>
+{% end %}
+<a href="/diplomas/add"><button class="add">Add diploma template</button></a>
 {% end %}

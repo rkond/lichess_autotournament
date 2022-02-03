@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block head %}
+<script src="{{ static_url('js/fabric.min.js') }}"></script>
+<script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+<script src="{{ static_url('js/diplomas.js') }}"></script>
+<script>
+  const xsrf = "{{ handler.xsrf_token }}";
+  const diploma_template_id = "{{ id }}";
+</script>
+{% end %}
+
+{% block content %}
+<h1>Diplomas</h1>
+  <div id="canvas_container"><canvas id="diploma_canvas" width="420px" height="594xpx"></canvas></div>
+
+  <div id="diploma_fields">
+    <h3>Diploma elements</h3>
+  </div>
+
+</div>
+{% end %}

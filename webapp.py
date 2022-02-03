@@ -21,6 +21,7 @@ from tinydb import TinyDB, Query
 
 from lichessapi import LichessAPI, LichessError
 from basehandler import BaseHandler
+from diplomas import DiplomaTemplateHandler
 
 from version import __version__, __revision__
 
@@ -41,6 +42,8 @@ class HomeHandler(BaseHandler):
         templates = table.search((T.user == self.current_user['id']) & (T.tournament_set == 'default'))
         table = self.db.table('tournaments')
         tournaments = table.search((T.user == self.current_user['id']) & (T.tournament_set == 'default'))
+        table = self.db.table('diploma_templates')
+        diploma_templates = table.search(T.user == self.current_user['id'])
 
         #self.write(await self.lichess.get_tournament(self.token, 'swiss', 'ADqbMiXP', self.options.team_id))
         #self.write(await self.lichess.get_tournament(self.token, 'arena', 'tDqVoGA6'))
@@ -49,6 +52,7 @@ class HomeHandler(BaseHandler):
             'home.html',
             templates=templates,
             tournaments=tournaments,
+            diploma_templates=diploma_templates,
             datetime=datetime,
             timedelta=timedelta,
             this_monday=get_this_monday(datetime.utcnow()),
@@ -62,7 +66,7 @@ class AddHandler(BaseHandler):
         self.render(
             'add.html',
             teams=(
-                team for team in 
+                team for team in
                 await self.lichess.get_user_teams(self.token, self.current_user['username'])
                 if any(self.current_user['id'] == leader['id'] for leader in team['leaders'])),
             errors=[]
@@ -209,6 +213,16 @@ class TournamentsHandler(BaseHandler):
         )
 
 
+class DiplomasHandler(BaseHandler):
+    @tornado.web.authenticated
+    async def get(self) -> None:
+        self.render(
+            'diplomas.html',
+            id=token_urlsafe(16),
+            errors=[]
+        )
+
+
 class LoginHandler(BaseHandler):
     async def get(self) -> None:
         if not self.get_argument('code', None):
@@ -278,7 +292,10 @@ urls = [
     (r"/delete/(.*)", DeleteHandler),
     (r"/create", CreateHandler),
     (r"/tournaments", TournamentsHandler),
+    (r"/diplomas/add", DiplomasHandler),
     (r"/login", LoginHandler),
+
+    (r"/api/v1/diploma/template/([a-zA-Z0-1\-_=]+)", DiplomaTemplateHandler),
 ]
 application = tornado.web.Application(urls, **settings)  # type: ignore [arg-type]
 

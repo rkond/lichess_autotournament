@@ -1,6 +1,7 @@
 import logging
 
-from typing import cast
+from typing import cast, Any
+from json import dumps
 
 import tornado.httpserver
 import tornado.ioloop
@@ -38,3 +39,18 @@ class BaseHandler(tornado.web.RequestHandler):
 
     def get_login_url(self) -> str:
         return "/login"
+
+class BaseAPIHandler(BaseHandler):
+    def prepare(self) -> None:
+        self.set_header("Content-Type", "application/json")
+        return super().prepare()
+
+    def write_error(self, status_code: int, **kwargs: Any) -> None:
+        message = "Internal error"
+        if 'exc_info' in kwargs:
+            try:
+                if isinstance(kwargs['exc_info'][1], tornado.web.HTTPError):
+                    message = kwargs['exc_info'][1].log_message
+            except Exception:
+                logging.exception('Cannot extract exc_info form error')
+        self.write(dumps({'success': False, 'code': status_code, 'message': message}))
