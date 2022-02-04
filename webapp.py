@@ -215,10 +215,19 @@ class TournamentsHandler(BaseHandler):
 
 class DiplomasHandler(BaseHandler):
     @tornado.web.authenticated
-    async def get(self) -> None:
+    async def get(self, command, id = '') -> None:
+        if command == 'delete':
+            self.check_xsrf_cookie()
+            T = Query()
+            table = self.db.table('diploma_templates')
+            table.remove((T.user == self.current_user['id']) & (T.id == id))
+            self.redirect('/')
+        if command == 'add':
+            self.redirect(f'/diplomas/edit/{token_urlsafe(16)}')
+            return
         self.render(
             'diplomas.html',
-            id=token_urlsafe(16),
+            id=id,
             errors=[]
         )
 
@@ -292,10 +301,12 @@ urls = [
     (r"/delete/(.*)", DeleteHandler),
     (r"/create", CreateHandler),
     (r"/tournaments", TournamentsHandler),
-    (r"/diplomas/add", DiplomasHandler),
+    (r"/diplomas/(add)", DiplomasHandler),
+    (r"/diplomas/(delete)/([-a-zA-Z0-9_=]+)", DiplomasHandler),
+    (r"/diplomas/(edit)/([-a-zA-Z0-9_=]+)", DiplomasHandler),
     (r"/login", LoginHandler),
 
-    (r"/api/v1/diploma/template/([a-zA-Z0-1\-_=]+)", DiplomaTemplateHandler),
+    (r"/api/v1/diploma/template/([-a-zA-Z0-9_=]+)", DiplomaTemplateHandler),
 ]
 application = tornado.web.Application(urls, **settings)  # type: ignore [arg-type]
 

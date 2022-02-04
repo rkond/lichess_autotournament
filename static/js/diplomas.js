@@ -12,7 +12,7 @@ function DiplomaConfiguration(props) {
   for (const fieldKey in props.fields) {
     fields[fieldKey] = Object.assign({}, props.fields[fieldKey].type.defaultProps, props.fields[fieldKey])
   }
-  const [fieldsValues, setFieldsValues] = React.useState({});
+  const [fieldsValues, setFieldsValues] = React.useState(fields);
   const handleChange = (fieldKey, newState) => {
     let newFields = Object.assign({}, fieldsValues);
     Object.assign(newFields[fieldKey], newState);
@@ -47,6 +47,9 @@ function DiplomaConfiguration(props) {
             handleRemove: handleRemove
           })))
   };
+
+  const [templateName, setTemplateName] = React.useState(props.name);
+
   const save = () => {
     // TODO: Error reporting
     fetch(`/api/v1/diploma/template/${diploma_template_id}?_xsrf=${xsrf}`, {
@@ -55,10 +58,19 @@ function DiplomaConfiguration(props) {
       headers: {
         'Content-Type': 'appication/json'
       },
-      body: JSON.stringify(fieldsValues)
+      body: JSON.stringify({
+        name: templateName,
+        thumbnail: canvasObj.toDataURL({
+          format: 'png',
+          multiplier: .2
+        }),
+        fields: fieldsValues,
+      })
     })
   };
   return [
+    e('label', { key: 'template-name-label', htmlFor: 'template_name' }, "Name: "),
+    e('input', { key: 'template-name-input', id: 'template_name', type: 'text', value: templateName, placeholder: 'Diploma Template 1', onChange: (e) => setTemplateName(e.target.value) }),
     e('h3', { key: "diploma_config_header", className: "diploma_config_header" }, "Diploma fields"),
     e('select', { key: "diploma-add-selector", onChange: event => setAddingField(event.target.value) }, [
       e('option', { key: 'BackgroundImage', value: 'BackgroundImage' }, "Background Image"),
@@ -212,7 +224,8 @@ class TextField extends React.Component {
   static defaultProps = {
     font: "Sans",
     font_size: 24,
-    text: "Example Text"
+    text: "Example Text",
+    color: '#000'
   };
 
   constructor(props) {
@@ -230,7 +243,7 @@ class TextField extends React.Component {
   renderOnCanvas() {
     if (!this.textBox) {
       this.textBox = new fabric.Text(
-        this.props.font,
+        this.props.text,
         Object.assign({
           left: canvasObj.width / 2,
           originX: 'center',
@@ -242,6 +255,7 @@ class TextField extends React.Component {
           hasBorders: true
         }, this.props.fabric_props)
       )
+      this.textBox.set('fill', this.props.color);
       this.textBox.setControlsVisibility({
         tl: true,
         tr: true,
@@ -258,6 +272,7 @@ class TextField extends React.Component {
       this.textBox.text = this.props.text;
       this.textBox.fontFamily = this.props.font;
       this.textBox.fontSize = this.props.font_size;
+      this.textBox.set('fill', this.props.color)
       canvasObj.renderAll();
     }
     canvasObj.setActiveObject(this.textBox);
@@ -284,6 +299,12 @@ class TextField extends React.Component {
         defaultValue: this.props.font_size,
         onChange: (event) => { this.props.handleChange(this.props.fieldKey, { font_size: event.target.value }); }
       }),
+      e('input', {
+        id: "color",
+        type: "color",
+        defaultValue: this.props.color,
+        onChange: (event) => { this.props.handleChange(this.props.fieldKey, { color: event.target.value }); }
+      }),
       e('br'),
       e('label', {
         htmlFor: "text"
@@ -292,7 +313,7 @@ class TextField extends React.Component {
         id: "text",
         type: "text",
         defaultValue: this.props.text,
-        onChange: (event) => { this.props.handleChange(this.props.fieldKey, { name: event.target.value }); }
+        onChange: (event) => { this.props.handleChange(this.props.fieldKey, { text: event.target.value }); }
       }),
     )
   }
@@ -312,12 +333,10 @@ document.addEventListener('DOMContentLoaded', () => {
         config = {
           fields: {
             'background-image': { type: 'BackgroundImage' },
-            'player-name': { type: 'PlayerName' },
+            'player-name': { type: 'TextField' },
           }
         }
       }
-      ReactDOM.render(e(DiplomaConfiguration, {
-        fields: config.fields
-      }), domContainer)
+      ReactDOM.render(e(DiplomaConfiguration, config), domContainer)
     });
 });

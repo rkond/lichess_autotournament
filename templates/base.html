@@ -9,6 +9,9 @@
 </head>
 <body>
   <main>
+    {% if handler.request.path != '/' %}
+      <a href="/">&lt; Back</a>
+    {% end %}
     <div class="content">
       {% block content %}{% end %}
     </div>

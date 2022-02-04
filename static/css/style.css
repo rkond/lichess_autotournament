@@ -25,6 +25,8 @@ body {
 }
 main {
     grid-area: main;
+    margin: 0 1em;
+    max-width: 960px;
 }
 
 .error {
@@ -32,6 +34,10 @@ main {
     background-color: #b0e7f0;
     width: fit-content;
     padding: .2em 1em;
+}
+
+#diploma_fields {
+    width: 320px;
 }
 
 .diploma_field{
@@ -63,7 +69,7 @@ main {
     border-radius: 5px;
     width: fit-content;
     height: fit-content;
-    float: left;
+    float: right;
     margin: 0 1em;
 }
 
@@ -91,4 +97,10 @@ main {
   }
   .close:after {
     transform: rotate(-45deg);
+  }
+
+  input[type=color] {
+    border: none;
+    width: 1.5em;
+    height: 1.5em;
   }
