@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import pwd
@@ -20,7 +21,7 @@ import tornado.escape
 from tinydb import TinyDB, Query
 
 from lichessapi import LichessAPI, LichessError
-from basehandler import BaseHandler
+from basehandler import BaseHandler, BaseAPIHandler
 from diplomas import DiplomaTemplateHandler
 
 from version import __version__, __revision__
@@ -34,8 +35,32 @@ def get_this_monday(d: datetime) -> datetime:
     return datetime(monday.year, monday.month, monday.day)
 
 
+class TournamentAPI(BaseAPIHandler):
+    @tornado.web.authenticated  # type: ignore[misc]
+    async def get(self) -> None:
+        tournament_url = self.get_argument('tournament')
+        scheme, netloc, path, query, fragment = urlsplit(tournament_url)
+        paths = path.split('/')
+        if netloc != 'lichess.org' or len(paths) < 2:
+            raise tornado.web.HTTPError(400, "Invalid tournament URL")
+        else:
+            id = paths[-1]
+            if paths[-2] == 'tournament':
+                type = 'arena'
+            elif paths[-2] == 'swiss':
+                type = 'swiss'
+            else:
+                raise tornado.web.HTTPError(400, "Invalid tournament type")
+        tournament = await self.lichess.get_tournament(self.token, type, id, self.options.team_id)
+        players = await gather(*[self.lichess.get_user(self.token, player['name']) for player in tournament['standing']['players']])  # noqa: E501
+        for p, player in zip(tournament['standing']['players'], players):
+            p['profile'] = player.get('profile', {})
+        tournament['success'] = True
+        self.write(json.dumps(tournament))
+
+
 class HomeHandler(BaseHandler):
-    @tornado.web.authenticated
+    @tornado.web.authenticated  # type: ignore[misc]
     async def get(self) -> None:
         table = self.db.table('templates')
         T = Query()
@@ -44,9 +69,6 @@ class HomeHandler(BaseHandler):
         tournaments = table.search((T.user == self.current_user['id']) & (T.tournament_set == 'default'))
         table = self.db.table('diploma_templates')
         diploma_templates = table.search(T.user == self.current_user['id'])
-
-        #self.write(await self.lichess.get_tournament(self.token, 'swiss', 'ADqbMiXP', self.options.team_id))
-        #self.write(await self.lichess.get_tournament(self.token, 'arena', 'tDqVoGA6'))
 
         self.render(
             'home.html',
@@ -61,7 +83,7 @@ class HomeHandler(BaseHandler):
 
 
 class AddHandler(BaseHandler):
-    @tornado.web.authenticated
+    @tornado.web.authenticated  # type: ignore[misc]
     async def get(self) -> None:
         self.render(
             'add.html',
@@ -72,7 +94,7 @@ class AddHandler(BaseHandler):
             errors=[]
             )
 
-    @tornado.web.authenticated
+    @tornado.web.authenticated  # type: ignore[misc]
     async def post(self) -> None:
         errors = []
         template_tournament_url = self.get_argument('tournament')
@@ -95,7 +117,7 @@ class AddHandler(BaseHandler):
         if errors:
             self.render('add.html', errors=errors)
             return
-        tournament = await self.lichess.get_tournament(self.token, type, id, self.options.team_id)  # type: ignore[has-type] # noqa: E501
+        tournament = await self.lichess.get_tournament(self.token, type, id, self.options.team_id)  # noqa: E501
         logging.debug(f"Adding template tournament: {tournament}")
 
         if type == 'arena':
@@ -105,8 +127,7 @@ class AddHandler(BaseHandler):
                 'clockTime': tournament.get('clock', {}).get('limit'),
                 'clockIncrement': tournament.get('clock', {}).get('increment'),
                 'minutes': tournament.get('minutes'),
-                'startDate': datetime.fromisoformat(tournament.get('startsAt').strip('Z')).\
-                replace(tzinfo=timezone.utc).timestamp(),
+                'startDate': datetime.fromisoformat(tournament.get('startsAt').strip('Z')).replace(tzinfo=timezone.utc).timestamp(),  # type:ignore[attr-defined, union-attr]  # noqa: E501
                 'variant': tournament.get('variant'),
                 'rated': bool(self.get_argument('rated', False)),
                 'berserkable': bool(self.get_argument('berserkable', False)),
@@ -131,7 +152,7 @@ class AddHandler(BaseHandler):
 
 
 class CreateHandler(BaseHandler):
-    @tornado.web.authenticated
+    @tornado.web.authenticated  # type: ignore[misc]
     async def post(self) -> None:
         week = datetime.utcfromtimestamp(float(self.get_argument('week')))
         T = Query()
@@ -187,7 +208,7 @@ class CreateHandler(BaseHandler):
 
 
 class DeleteHandler(BaseHandler):
-    @tornado.web.authenticated
+    @tornado.web.authenticated  # type: ignore[misc]
     async def get(self, id: str) -> None:
         self.check_xsrf_cookie()
         T = Query()
@@ -198,7 +219,7 @@ class DeleteHandler(BaseHandler):
 
 
 class TournamentsHandler(BaseHandler):
-    @tornado.web.authenticated
+    @tornado.web.authenticated  # type: ignore[misc]
     async def get(self) -> None:
         T = Query()
         table = self.db.table('templates')
@@ -209,27 +230,29 @@ class TournamentsHandler(BaseHandler):
         self.render(
             'tournaments.html',
             errors=[],
-            tournaments=[(templates_dict.get(t['template']), t) for t in tournaments if templates_dict.get(t['template'])]
+            tournaments=[(templates_dict.get(t['template']), t) for t in tournaments if templates_dict.get(t['template'])]  # noqa: E501
         )
 
 
 class DiplomasHandler(BaseHandler):
-    @tornado.web.authenticated
-    async def get(self, command, id = '') -> None:
+    @tornado.web.authenticated  # type: ignore[misc]
+    async def get(self, command: str, id: str = '') -> None:
         if command == 'delete':
             self.check_xsrf_cookie()
             T = Query()
             table = self.db.table('diploma_templates')
             table.remove((T.user == self.current_user['id']) & (T.id == id))
             self.redirect('/')
-        if command == 'add':
+        elif command == 'add':
             self.redirect(f'/diplomas/edit/{token_urlsafe(16)}')
-            return
-        self.render(
-            'diplomas.html',
-            id=id,
-            errors=[]
-        )
+        elif command == 'edit':
+            self.render(
+                'diplomas.html',
+                id=id,
+                errors=[],
+            )
+        else:
+            raise tornado.web.HTTPError(404)
 
 
 class LoginHandler(BaseHandler):
@@ -307,8 +330,9 @@ urls = [
     (r"/login", LoginHandler),
 
     (r"/api/v1/diploma/template/([-a-zA-Z0-9_=]+)", DiplomaTemplateHandler),
+    (r"/api/v1/tournament", TournamentAPI),
 ]
-application = tornado.web.Application(urls, **settings)  # type: ignore [arg-type]
+application = tornado.web.Application(urls, **settings)
 
 
 def run() -> None:

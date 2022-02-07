@@ -11,15 +11,18 @@ from typing import cast, Any, Dict, List, Optional, Tuple, Union
 
 from tornado.httpclient import AsyncHTTPClient
 
+
 class LichessError(RuntimeError):
-    def __init__(self, code: int, message:str, *args: object) -> None:
+    def __init__(self, code: int, message: str, *args: object) -> None:
         super().__init__(*args)
         self.code = code
         self.message = message
 
+
 class LichessAPI():
     _OAUTH_AUTHORIZE_URL = 'https://lichess.org/oauth'
     _OAUTH_ACCESS_TOKEN_URL = 'https://lichess.org/api/token'
+    _USER_URL = 'https://lichess.org/api/user'
     _ACCOUNT_URL = 'https://lichess.org/api/account'
     _EMAIL_URL = 'https://lichess.org/api/account/email'
     _USER_TEAMS_URL = 'https://lichess.org/api/team/of'
@@ -85,7 +88,7 @@ class LichessAPI():
         return f'{self._OAUTH_AUTHORIZE_URL}/?{urlencode(args)}', code_verifier
 
     async def get_access_token(self, code: str, code_verifier: str) -> str:
-        return cast(str, (await self._make_request(
+        return cast(str, cast(Dict[str, Any], (await self._make_request(
             self._OAUTH_ACCESS_TOKEN_URL,
             method='POST',
             token='',
@@ -94,7 +97,13 @@ class LichessAPI():
             code_verifier=code_verifier,
             redirect_uri=self.redirect_uri,
             client_id=self.client_id
-        ))['access_token'])
+        )))['access_token'])
+
+    async def get_user(self, token: str, username: str) -> Dict[str, Any]:
+        return cast(Dict[str, Any], await self._make_request(
+                    f'{self._USER_URL}/{username}',
+                    method='GET',
+                    token=token))
 
     async def get_current_user(self, token: str) -> Dict[str, Any]:
         account_request = self.http.fetch(
@@ -113,23 +122,23 @@ class LichessAPI():
         user.update(email)
         return cast(Dict[str, Any], user)
 
-    async def get_user_teams(self, token: str, username: str) -> Dict[str, Any]:
-        return cast(Dict[str, Any], await self._make_request(
+    async def get_user_teams(self, token: str, username: str) -> List[Dict[str, Any]]:
+        return cast(List[Dict[str, Any]], await self._make_request(
             f'{self._USER_TEAMS_URL}/{username}',
             method='GET',
-            token='token'))
+            token=token))
 
     async def get_tournament(self, token: str, type: str, id: str, team_id: str = '') -> Dict[str, Any]:
         if type == 'arena':
             return cast(Dict[str, Any], await self._make_request(
                 f'{self.ARENA_URL}/{id}',
                 method='GET',
-                token='token'))
+                token=token))
         elif type == 'swiss':
             tournaments: List[Dict[str, Any]] = cast(List[Dict[str, Any]], await self._make_request(
                 f'{self.TEAM_URL}/{team_id}/swiss',
                 method='GET',
-                token='token',
+                token=token,
                 max=100000))
             for t in tournaments:
                 if t['id'] == id:

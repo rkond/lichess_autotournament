@@ -1,4 +1,3 @@
-import logging
 from json import loads, dumps, load, dump
 from os.path import join as path_join
 from os import makedirs
@@ -10,8 +9,9 @@ from tornado.web import HTTPError
 
 from basehandler import BaseAPIHandler
 
+
 class DiplomaTemplateHandler(BaseAPIHandler):
-    def get(self, id: str):
+    def get(self, id: str) -> None:
         T = Query()
         table = self.db.table('diploma_templates')
         template = table.get((T.user == self.current_user['id']) & (T.id == id))
@@ -24,7 +24,7 @@ class DiplomaTemplateHandler(BaseAPIHandler):
         template.update({'success': True})
         self.write(dumps(template))
 
-    def post(self, id: str):
+    def post(self, id: str) -> None:
         value = {}
         try:
             value = loads(self.request.body.decode())
