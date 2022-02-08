@@ -453,7 +453,9 @@ class TournamentsList extends React.Component {
   addTournament(url) {
     if (this.state.tournaments.indexOf(url) != -1)
       return
-    this.state.tournaments.push(url);
+    const t = this.state.tournaments.slice()
+    t.push(url);
+    this.setState({ tournaments: t });
   }
 
   onAdd() {
@@ -509,7 +511,7 @@ function TournamentLine(props) {
         if (res.success) {
           delete res.success;
           res.date = (new Date(res.startsAt)).toDateString(),
-          setTournament(res);
+            setTournament(res);
           setLoading({ request: true, loading: false });
         } else {
           alert("Invalid tournament URL")
