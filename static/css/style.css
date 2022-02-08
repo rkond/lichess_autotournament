@@ -44,16 +44,22 @@ main {
     border: solid lightgray 1px;
     width: 320px;
     display: inline-block;
-    padding: .5em;
+    padding: .5em 24px .5em .5em;
     margin: .25em 0;
     position: relative;
 }
 
-.diploma_field input[type=text] {
+.diploma_field .font_input{
     width: 120px;
+}
+.diploma_field .text_input{
+    width: 240px;
 }
 .diploma_field input[type=number] {
     width: 3em;
+}
+.diploma_field button{
+    margin: 0 .5em;
 }
 
 .diploma_image_thumbnail {
@@ -107,6 +113,7 @@ input[type=color] {
 .tournament_line {
     position: relative;
     width: 320px;
+    padding-right: 24px;
 }
 
 .diploma_preview_canvas {
@@ -117,3 +124,4 @@ input[type=color] {
     overflow: hidden;
     cursor: pointer;
 }
+

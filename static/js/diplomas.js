@@ -6,7 +6,6 @@ class DiplomaConfiguration extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      fields: props.fields,
       addField: 'BackgroundImage',
       name: props.name
     }
@@ -23,23 +22,23 @@ class DiplomaConfiguration extends React.Component {
   };
 
   handleChange(fieldKey, newState) {
-    let newFields = Object.assign({}, this.state.fields);
+    let newFields = Object.assign({}, this.props.fields);
     Object.assign(newFields[fieldKey], newState);
-    this.setState({ fields: newFields });
+    this.props.setFields(newFields);
   };
 
   handleRemove(fieldKey) {
-    let newFields = Object.assign({}, this.state.fields);
+    let newFields = Object.assign({}, this.props.fields);
     delete newFields[fieldKey];
-    this.setState({ fields: newFields });
+    this.props.setFields(newFields);
   };
 
   addField() {
-    let newFields = Object.assign({}, this.state.fields);
+    let newFields = Object.assign({}, this.props.fields);
     let i = 0;
-    while (this.state.fields[`${this.state.addField}-${i}`]) i++;
+    while (this.props.fields[`${this.state.addField}-${i}`]) i++;
     newFields[`${this.state.addField}-${i}`] = { type: this.state.addField };
-    this.setState({ fields: newFields });
+    this.props.setFields(newFields);
   }
 
   save() {
@@ -56,33 +55,33 @@ class DiplomaConfiguration extends React.Component {
           format: 'png',
           multiplier: .2
         }),
-        fields: this.state.fields,
+        fields: this.props.fields,
       })
     })
   };
 
-  renderOnCanvas(canvasObj) {
+  renderOnCanvas(canvasObj, substitutions) {
     return Promise.all(this.children.map(
-      fieldRef => fieldRef.current?fieldRef.current.renderOnCanvas(canvasObj):Promise.resolve()
+      fieldRef => fieldRef.current ? fieldRef.current.renderOnCanvas(canvasObj, substitutions) : Promise.resolve()
     ));
   }
 
   render() {
     const fields = {};
-    for (const fieldKey in this.state.fields) {
-      fields[fieldKey] = Object.assign({}, this.state.fields[fieldKey].type.defaultProps, this.state.fields[fieldKey])
+    for (const fieldKey in this.props.fields) {
+      fields[fieldKey] = Object.assign({}, this.props.fields[fieldKey].type.defaultProps, this.props.fields[fieldKey])
     }
     const childrenElements = [];
 
-    for (const fieldKey in this.state.fields) {
+    for (const fieldKey in this.props.fields) {
       const ref = React.createRef()
       this.children.push(ref);
       childrenElements.push(
         e(
-          DiplomaConfiguration.getType(this.state.fields[fieldKey].type),
+          DiplomaConfiguration.getType(this.props.fields[fieldKey].type),
           Object.assign(
             {},
-            this.state.fields[fieldKey],
+            this.props.fields[fieldKey],
             {
               ref: ref,
               key: fieldKey,
@@ -94,7 +93,7 @@ class DiplomaConfiguration extends React.Component {
     };
     return [
       e('label', { key: 'template-name-label', htmlFor: 'template_name' }, "Name: "),
-      e('input', { key: 'template-name-input', id: 'template_name', type: 'text', value: this.state.name, placeholder: 'Diploma Template 1', onChange: event => { this.setState({ name: event.target.value }) } }),
+      e('input', { key: 'template-name-input', id: 'template_name', type: 'text', defaultValue: this.state.name, placeholder: 'Diploma Template 1', onChange: event => { this.setState({ name: event.target.value }) } }),
       e('h3', { key: "diploma_config_header", className: "diploma_config_header" }, "Diploma fields"),
       e('select', { key: "diploma-add-selector", onChange: event => { this.setState({ addField: event.target.value }) } }, [
         e('option', { key: 'BackgroundImage', value: 'BackgroundImage' }, "Background Image"),
@@ -116,6 +115,13 @@ class BackgroundImage extends React.Component {
   constructor(props) {
     super(props);
     this.canvas = props.canvas;
+  }
+
+  componentDidMount() {
+    this.renderOnCanvas(this.canvas);
+  }
+  componentDidUpdate() {
+    this.renderOnCanvas(this.canvas);
   }
 
   renderOnCanvas(canvasObj) {
@@ -142,7 +148,6 @@ class BackgroundImage extends React.Component {
   }
 
   render() {
-    this.renderOnCanvas(this.canvas);
     return e('div', {
       className: 'diploma_field'
     },
@@ -179,6 +184,13 @@ class ImageField extends React.Component {
     this.canvas = props.canvas;
   }
 
+  componentDidMount() {
+    this.renderOnCanvas(this.canvas);
+  }
+  componentDidUpdate() {
+    this.renderOnCanvas(this.canvas);
+  }
+
   shouldComponentUpdate(nextProps, nextState) {
     for (const k in nextProps) {
       if (k != 'fabric_props' && nextProps[k] != this.props[k])
@@ -209,7 +221,6 @@ class ImageField extends React.Component {
             br: true,
             mtr: true
           });
-          imageObject.scaleToWidth(canvasObj.width * .7);
           canvasObj.add(imageObject);
           imageObject.on('modified',
             (event) => {
@@ -226,7 +237,6 @@ class ImageField extends React.Component {
   }
 
   render() {
-    this.renderOnCanvas(this.canvas);
     return e('div', {
       className: 'diploma_field'
     },
@@ -263,33 +273,67 @@ class TextField extends React.Component {
     color: '#000'
   };
 
+  static commonSubstitutions = [
+    '${player.profile.firstName}',
+    '${player.profile.lastName}',
+    '${player.name}',
+    '${player.rank}',
+    '${tournament.nbPlayers}',
+    '${tournament.date}',
+    '${tournament.fullName}',
+    '${tournament.description}',
+  ];
+
   constructor(props) {
     super(props);
     this.canvas = props.canvas;
+    this.state = {
+      chosenSubst: props.chosenSubst
+    };
   }
 
-  shouldComponentUpdate(nextProps, nextState) {
-    for (const k in nextProps) {
-      if (k != 'fabric_props' && nextProps[k] != this.props[k])
-        return true;
-    }
-    return false;
+  static getDeep(obj, path) {
+    return path.split(".").reduce((o, key) => o && o[key] ? o[key] : null, obj);
   }
 
-  renderOnCanvas(canvasObj) {
+  componentDidMount() {
+    this.renderOnCanvas(this.canvas);
+  }
+  componentDidUpdate() {
+    this.renderOnCanvas(this.canvas);
+  }
+
+  makeSubstitutions(text, substitutions) {
+    if (!substitutions)
+      return text;
+    const regex = /\$\{([a-zA-Z.]+)\}/ig;
+    return text.replaceAll(regex, (match, p1) => {
+      let replacement = TextField.getDeep(substitutions, p1);
+      if (p1 == 'tournament.date')
+        replacement = (new Date(substitutions.tournament.startsAt)).toLocaleDateString();
+      if (!replacement)
+        replacement = '';
+      return replacement;
+    });
+  }
+
+  renderOnCanvas(canvasObj, substitutions) {
+    const text = this.makeSubstitutions(this.props.text, substitutions);
     if (!canvasObj[this.props.fieldKey]) {
       const textBox = new fabric.Text(
-        this.props.text,
+        text,
         Object.assign({
           left: canvasObj.width / 2,
           originX: 'center',
           top: canvasObj.height * .39,
-          fontFamily: this.props.font,
-          fontSize: this.props.font_size,
           selectable: true,
           hasControls: true,
           hasBorders: true
-        }, this.props.fabric_props)
+        }, this.props.fabric_props, {
+          fontFamily: this.props.font,
+          fontSize: this.props.font_size,
+          text: text
+        })
       )
       textBox.set('fill', this.props.color);
       textBox.setControlsVisibility({
@@ -307,7 +351,7 @@ class TextField extends React.Component {
       canvasObj[this.props.fieldKey] = textBox;
     } else {
       const textBox = canvasObj[this.props.fieldKey];
-      textBox.text = this.props.text;
+      textBox.text = text;
       textBox.fontFamily = this.props.font;
       textBox.fontSize = this.props.font_size;
       textBox.set('fill', this.props.color)
@@ -317,7 +361,6 @@ class TextField extends React.Component {
   }
 
   render() {
-    this.renderOnCanvas(this.canvas);
     return e('div', {
       className: 'diploma_field',
     },
@@ -329,6 +372,7 @@ class TextField extends React.Component {
         id: "font",
         type: "text",
         defaultValue: this.props.font,
+        className: "font_input",
         onChange: (event) => { this.props.handleChange(this.props.fieldKey, { font: event.target.value }); }
       }),
       e('input', {
@@ -350,9 +394,34 @@ class TextField extends React.Component {
       e('input', {
         id: "text",
         type: "text",
-        defaultValue: this.props.text,
+        className: "text_input",
+        value: this.props.text,
         onChange: (event) => { this.props.handleChange(this.props.fieldKey, { text: event.target.value }); }
       }),
+      e('br'),
+      e('select', {
+        className: "select_input",
+        onChange: (event) => {
+          this.setState({ chosenSubst: event.target.value });
+        }
+      },
+        e('option', {
+          key: `sub-null`,
+          value: '',
+        }, "Possible substitutions…"),
+        TextField.commonSubstitutions.map((sub, index) => {
+          return e('option', {
+            key: `sub-${index}`,
+            value: sub,
+          }, sub)
+        })),
+      e('button', {
+        disabled: this.state.chosenSubst ? null : true,
+        onClick: () => {
+          if (this.state.chosenSubst)
+            this.props.handleChange(this.props.fieldKey, { text: this.props.text + this.state.chosenSubst });
+        }
+      }, "Add")
     )
   }
 }
@@ -456,44 +525,59 @@ function DiplomasLine(props) {
           height: props.canvas.getHeight()
         });
       canvasObj.setZoom(.3033);
-      props.fieldsRef.current.renderOnCanvas(canvasObj);
+      props.fieldsRef.current.renderOnCanvas(canvasObj, {
+        tournament: props.tournament,
+        player: player
+      });
     })
   });
   return props.tournament.standing.players.map(player => {
     return e('a', {
-        className:"diploma_preview_canvas",
-        key: `canvas-${props.tournament.id}-${player.rank}`,
-        onClick: (event) => {
-          const tempCanvas = new fabric.StaticCanvas(document.createElement('canvas'));
+      className: "diploma_preview_canvas",
+      key: `canvas-${props.tournament.id}-${player.rank}`,
+      onClick: (event) => {
+        const tempCanvas = new fabric.StaticCanvas(document.createElement('canvas'));
+        tempCanvas.setDimensions(
+          {
+            width: props.canvas.getWidth(),
+            height: props.canvas.getHeight()
+          });
+        props.fieldsRef.current.renderOnCanvas(tempCanvas, {
+          tournament: props.tournament,
+          player: player
+        }).then(() => {
           tempCanvas.setDimensions(
             {
-              width: props.canvas.getWidth(),
-              height: props.canvas.getHeight()
+              width: props.canvas.getWidth() * 4,
+              height: props.canvas.getHeight() * 4
             });
-          props.fieldsRef.current.renderOnCanvas(tempCanvas).then(() => {
-            tempCanvas.setDimensions(
-              {
-                width: props.canvas.getWidth()*4,
-                height: props.canvas.getHeight()*4
-              });
-            tempCanvas.setZoom(4);
-            window.open(tempCanvas.toDataURL(), '_blank').focus()
-          });
-        }
-      },
-      e('canvas', {id: `canvas-${props.tournament.id}-${player.rank}`}))
+          tempCanvas.setZoom(4);
+          window.open(tempCanvas.toDataURL(), '_blank').focus()
+        });
+      }
+    },
+      e('canvas', { id: `canvas-${props.tournament.id}-${player.rank}` }))
   });
 }
 
 function Diplomas(props) {
   const fieldsRef = React.createRef();
 
+  const [fields, setFields] = React.useState(props.fields)
   return [
-    e('div', {id:'diploma_fields', key: 'diploma_fields'},
-      e(DiplomaConfiguration, Object.assign({ref: fieldsRef},props))),
-    e('div', {id:'tournament_list', key: 'tournament_list'},
+    e('div', { id: 'diploma_fields', key: 'diploma_fields' },
+      e(DiplomaConfiguration, {
+        ref: fieldsRef,
+        setFields: (f) => {
+          setFields(f);
+        },
+        fields: fields,
+        canvas: props.canvas,
+        name: props.name
+      })),
+    e('div', { id: 'tournament_list', key: 'tournament_list' },
       e('h3', {}, "Apply to tournaments"),
-      e('div', {id:'tournaments'},
+      e('div', { id: 'tournaments' },
         e(TournamentsList, {
           canvas: props.canvas,
           fieldsRef: fieldsRef
