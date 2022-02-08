@@ -26,7 +26,7 @@ body {
 main {
     grid-area: main;
     margin: 0 1em;
-    max-width: 960px;
+    max-width: 810px;
 }
 
 .error {
@@ -75,7 +75,16 @@ main {
     border-radius: 5px;
     width: fit-content;
     height: fit-content;
-    float: right;
+}
+
+@media (min-width: 715px) {
+    #canvas_container {
+        float: right;
+    }
+}
+
+#diplomas {
+    min-width: 384px;
 }
 
 .close {
@@ -110,10 +119,15 @@ input[type=color] {
     height: 1.5em;
 }
 
+.tournament_list ol {
+    padding: 0;
+}
+
 .tournament_line {
     position: relative;
     width: 320px;
     padding-right: 24px;
+    list-style: none;
 }
 
 .diploma_preview_canvas {
@@ -124,4 +138,13 @@ input[type=color] {
     overflow: hidden;
     cursor: pointer;
 }
+.diploma_list {
+    padding: 0;
+}
+.diploma_list li{
+    list-style: none;
+    display: inline-block;
+    margin: 0 .5em;
+}
+
 

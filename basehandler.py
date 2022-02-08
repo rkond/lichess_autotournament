@@ -15,8 +15,8 @@ from tinydb import TinyDB
 from lichessapi import LichessAPI
 
 
-class BaseHandler(tornado.web.RequestHandler):
-    options = tornado.options.options  # type: ignore[assignment]
+class BaseHandler(tornado.web.RequestHandler):  # type: ignore[misc]
+    options = tornado.options.options
     token: str
     db: TinyDB
 
@@ -40,10 +40,11 @@ class BaseHandler(tornado.web.RequestHandler):
     def get_login_url(self) -> str:
         return "/login"
 
+
 class BaseAPIHandler(BaseHandler):
-    def prepare(self) -> None:
+    async def prepare(self) -> None:
+        await super().prepare()
         self.set_header("Content-Type", "application/json")
-        return super().prepare()
 
     def write_error(self, status_code: int, **kwargs: Any) -> None:
         message = "Internal error"

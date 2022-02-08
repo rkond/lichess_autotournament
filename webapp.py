@@ -227,9 +227,13 @@ class TournamentsHandler(BaseHandler):
         table = self.db.table('tournaments')
         tournaments = table.search((T.user == self.current_user['id']) & (T.tournament_set == 'default'))
         templates_dict = dict((t['id'], t) for t in templates)
+        table = self.db.table('diploma_templates')
+        diploma_templates = table.search(T.user == self.current_user['id'])
+
         self.render(
             'tournaments.html',
             errors=[],
+            diploma_templates=diploma_templates,
             tournaments=[(templates_dict.get(t['template']), t) for t in tournaments if templates_dict.get(t['template'])]  # noqa: E501
         )
 

@@ -117,6 +117,10 @@ class BackgroundImage extends React.Component {
     this.canvas = props.canvas;
   }
 
+  componentWillUnmount() {
+    this.canvas.setBackgroundImage(null);
+  }
+
   componentDidMount() {
     this.renderOnCanvas(this.canvas);
   }
@@ -182,6 +186,13 @@ class ImageField extends React.Component {
   constructor(props) {
     super(props);
     this.canvas = props.canvas;
+  }
+
+  componentWillUnmount() {
+    if (this.canvas[this.props.fieldKey]) {
+      this.canvas.remove(this.canvas[this.props.fieldKey]);
+    }
+    delete this.canvas[this.props.fieldKey];
   }
 
   componentDidMount() {
@@ -294,6 +305,13 @@ class TextField extends React.Component {
 
   static getDeep(obj, path) {
     return path.split(".").reduce((o, key) => o && o[key] ? o[key] : null, obj);
+  }
+
+  componentWillUnmount() {
+    if (this.canvas[this.props.fieldKey]) {
+      this.canvas.remove(this.canvas[this.props.fieldKey]);
+    }
+    delete this.canvas[this.props.fieldKey];
   }
 
   componentDidMount() {
@@ -429,13 +447,15 @@ class TextField extends React.Component {
 class TournamentsList extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { tournaments: props.tournaments };
-    if (!this.state.tournaments)
-      this.state.tournaments = [];
+    this.state = { tournaments: [] };
   }
 
-  onAdd() {
-    fetch(`/api/v1/tournament?${new URLSearchParams({ tournament: this.state.new_url })}`, {
+  componentDidMount() {
+    this.props.tournaments.forEach((url) => this.addTournament(url));
+  }
+
+  addTournament(url) {
+    fetch(`/api/v1/tournament?${new URLSearchParams({ tournament: url })}`, {
       credentials: 'include',
     })
       .then(res => res.json())
@@ -452,6 +472,10 @@ class TournamentsList extends React.Component {
         }
       });
 
+  }
+
+  onAdd() {
+    this.addTournament(this.state.new_url);
   }
 
   onDelete(index) {
@@ -477,24 +501,15 @@ class TournamentsList extends React.Component {
       this.state.tournaments.length ?
         e('ol', {},
           this.state.tournaments.map((tournament, index) => e(TournamentLine, {
-            name: tournament.fullName,
+            tournament: tournament,
             date: (new Date(tournament.startsAt)).toDateString(),
             id: index,
             key: index,
-            onDelete: this.onDelete.bind(this)
+            onDelete: this.onDelete.bind(this),
+            canvas: this.props.canvas,
+            fieldsRef: this.props.fieldsRef
           }))
         ) : e('p', {}, "No tournaments"),
-      e('div', {
-        className: 'diplomas_container',
-        key: 'diplomas',
-      },
-        this.state.tournaments.map((tournament) => e(DiplomasLine, {
-          key: tournament.id,
-          canvas: this.props.canvas,
-          fieldsRef: this.props.fieldsRef,
-          tournament: tournament,
-        }))
-      )
     )
   }
 }
@@ -503,12 +518,18 @@ function TournamentLine(props) {
   return e('li', {
     className: 'tournament_line',
   },
-    e('b', {}, props.name),
+    e('b', {}, props.tournament.fullName),
     " at ",
     e('em', {}, props.date),
+    e('br', {}),
     e('span', {
       className: 'close tournament_line_close',
       onClick: (e) => { props.onDelete(props.id) }
+    }),
+    e(DiplomasLine, {
+      canvas: props.canvas,
+      fieldsRef: props.fieldsRef,
+      tournament: props.tournament,
     }))
 }
 
@@ -580,7 +601,8 @@ function Diplomas(props) {
       e('div', { id: 'tournaments' },
         e(TournamentsList, {
           canvas: props.canvas,
-          fieldsRef: fieldsRef
+          fieldsRef: fieldsRef,
+          tournaments: props.tournaments
         }))
     )]
 
@@ -604,8 +626,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       Object.assign(config, {
-        canvas: canvasObj
+        canvas: canvasObj,
+        tournaments: (new URLSearchParams(window.location.search)).getAll('u')
       })
-      ReactDOM.render(e(Diplomas, config), domContainer)
+      ReactDOM.render(
+        e(React.StrictMode, {}, e(Diplomas, config)), domContainer)
     });
 });

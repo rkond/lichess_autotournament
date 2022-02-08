@@ -37,16 +37,16 @@
   {% module xsrf_form_html() %}
 </form>
 {% end %}
+<p><a href="/tournaments">Previously created…</a></p>
 <hr>
-<a href="/tournaments"> Previously created </a>
 <h1>Diploma templates</h1>
 <ol class="diploma_list">
 {% for diploma in diploma_templates %}
-  <li>{{ diploma.get('name') or 'Unnamed' }} <img src="{{ diploma.get('thumbnail') }}">
-    <a href="/diplomas/edit/{{ diploma['id'] }}">Edit</a>
+  <li><a href="/diplomas/edit/{{ diploma['id'] }}">{{ diploma.get('name') or 'Unnamed' }}<br><img src="{{ diploma.get('thumbnail') }}"></a><br>
     <button class="delete_template" data-name="{{ diploma.get('name') or 'Unnamed' }}" data-link="/diplomas/delete/{{ diploma['id'] }}?_xsrf={{handler.xsrf_token}}">Delete</a></li>
 {% end %}
 </ol>
+<br>
 {% if  not diploma_templates %}
 <p>No templates</p>
 {% end %}

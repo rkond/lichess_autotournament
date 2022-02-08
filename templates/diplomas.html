@@ -1,8 +1,13 @@
 {% extends 'base.html' %}
 {% block head %}
 <script src="{{ static_url('js/fabric.min.js') }}"></script>
+{% if handler.options.debug %}
 <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+{% else %}
+<script src="{{ static_url('js/react.production.min.js') }}" crossorigin></script>
+<script src="{{ static_url('js/react-dom.production.min.js') }}" crossorigin></script>
+{% end %}
 <script src="{{ static_url('js/diplomas.js') }}"></script>
 <script>
   const xsrf = "{{ handler.xsrf_token }}";
@@ -12,8 +17,6 @@
 
 {% block content %}
 <h1>Diploma template</h1>
-  <div id="canvas_container"><canvas id="diploma_canvas" width="300px" height="422px"></canvas></div>
-  <div id="diplomas">
-  </div>
-</div>
+<div id="canvas_container"><canvas id="diploma_canvas" width="300px" height="422px"></canvas></div>
+<div id="diplomas"></div>
 {% end %}
