@@ -447,31 +447,13 @@ class TextField extends React.Component {
 class TournamentsList extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { tournaments: [] };
-  }
-
-  componentDidMount() {
-    this.props.tournaments.forEach((url) => this.addTournament(url));
+    this.state = { tournaments: props.tournaments };
   }
 
   addTournament(url) {
-    fetch(`/api/v1/tournament?${new URLSearchParams({ tournament: url })}`, {
-      credentials: 'include',
-    })
-      .then(res => res.json())
-      .then(res => {
-        if (res.success) {
-          if (!this.state.tournaments.every(t => t.id != res.id)) {
-            return
-          }
-          const t = this.state.tournaments;
-          t.push(res);
-          this.setState({ tournaments: t });
-        } else {
-          alert("Invalid tournament URL")
-        }
-      });
-
+    if (this.state.tournaments.indexOf(url) != -1)
+      return
+    this.state.tournaments.push(url);
   }
 
   onAdd() {
@@ -485,7 +467,6 @@ class TournamentsList extends React.Component {
   }
 
   render() {
-
     return e('div', {
       className: 'tournament_list'
     },
@@ -500,9 +481,8 @@ class TournamentsList extends React.Component {
       }, "Add"),
       this.state.tournaments.length ?
         e('ol', {},
-          this.state.tournaments.map((tournament, index) => e(TournamentLine, {
-            tournament: tournament,
-            date: (new Date(tournament.startsAt)).toDateString(),
+          this.state.tournaments.map((url, index) => e(TournamentLine, {
+            url: url,
             id: index,
             key: index,
             onDelete: this.onDelete.bind(this),
@@ -515,12 +495,34 @@ class TournamentsList extends React.Component {
 }
 
 function TournamentLine(props) {
-  return e('li', {
+  const [loading, setLoading] = React.useState({ request: false, loading: true });
+  const [tournament, setTournament] = React.useState({});
+  React.useLayoutEffect(() => {
+    if (loading.request)
+      return
+    setLoading({ request: true, loading: true });
+    fetch(`/api/v1/tournament?${new URLSearchParams({ tournament: props.url })}`, {
+      credentials: 'include',
+    })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) {
+          delete res.success;
+          res.date = (new Date(res.startsAt)).toDateString(),
+          setTournament(res);
+          setLoading({ request: true, loading: false });
+        } else {
+          alert("Invalid tournament URL")
+          onDelete(props.id);
+        }
+      });
+  });
+  return loading.loading ? e(Loader, {}) : e('li', {
     className: 'tournament_line',
   },
-    e('b', {}, props.tournament.fullName),
+    e('b', {}, tournament.fullName),
     " at ",
-    e('em', {}, props.date),
+    e('em', {}, tournament.date),
     e('br', {}),
     e('span', {
       className: 'close tournament_line_close',
@@ -529,7 +531,7 @@ function TournamentLine(props) {
     e(DiplomasLine, {
       canvas: props.canvas,
       fieldsRef: props.fieldsRef,
-      tournament: props.tournament,
+      tournament: tournament,
     }))
 }
 
@@ -583,9 +585,35 @@ function DiplomasLine(props) {
 
 function Diplomas(props) {
   const fieldsRef = React.createRef();
+  const [fields, setFields] = React.useState({})
+  const [name, setName] = React.useState('');
+  const [loading, setLoading] = React.useState({ request: false, loading: true });
+  const tournaments = (new URLSearchParams(window.location.search)).getAll('u');
 
-  const [fields, setFields] = React.useState(props.fields)
-  return [
+  React.useLayoutEffect(() => {
+    if (loading.request)
+      return
+    setLoading({ request: true, loading: true });
+    fetch(`/api/v1/diploma/template/${props.diploma_template_id}`, {
+      credentials: 'include',
+    })
+      .then(res => res.json())
+      .catch(() => null)
+      .then(config => {
+        if (!config || !config.success) {
+          setFields({
+            'BackgroundImage-0': { type: 'BackgroundImage' },
+            'TextField-0': { type: 'TextField' },
+          })
+        } else {
+          setName(config.name);
+          setFields(config.fields)
+        }
+        setLoading({ request: true, loading: false });
+      });
+  });
+
+  return loading.loading ? e(Loader, {}) : [
     e('div', { id: 'diploma_fields', key: 'diploma_fields' },
       e(DiplomaConfiguration, {
         ref: fieldsRef,
@@ -594,7 +622,7 @@ function Diplomas(props) {
         },
         fields: fields,
         canvas: props.canvas,
-        name: props.name
+        name: name
       })),
     e('div', { id: 'tournament_list', key: 'tournament_list' },
       e('h3', {}, "Apply to tournaments"),
@@ -602,34 +630,18 @@ function Diplomas(props) {
         e(TournamentsList, {
           canvas: props.canvas,
           fieldsRef: fieldsRef,
-          tournaments: props.tournaments
+          tournaments: tournaments
         }))
     )]
+}
 
+function Loader(props) {
+  return e('div', { className: 'lds-roller' }, e('div', {}), e('div', {}), e('div', {}), e('div', {}), e('div', {}), e('div', {}), e('div', {}), e('div', {}));
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   const domContainer = document.querySelector('#diplomas');
   const canvasObj = new fabric.Canvas(document.getElementById('diploma_canvas'));
-  fetch(`/api/v1/diploma/template/${diploma_template_id}`, {
-    credentials: 'include',
-  })
-    .then(res => res.json())
-    .catch(() => null)
-    .then(config => {
-      if (!config || !config.success) {
-        config = {
-          fields: {
-            'BackgroundImage-0': { type: 'BackgroundImage' },
-            'TextField-0': { type: 'TextField' },
-          }
-        }
-      }
-      Object.assign(config, {
-        canvas: canvasObj,
-        tournaments: (new URLSearchParams(window.location.search)).getAll('u')
-      })
-      ReactDOM.render(
-        e(React.StrictMode, {}, e(Diplomas, config)), domContainer)
-    });
+  ReactDOM.render(
+    e(React.StrictMode, {}, e(Diplomas, { canvas: canvasObj, diploma_template_id: diploma_template_id })), domContainer)
 });
