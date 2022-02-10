@@ -23,6 +23,7 @@ from tinydb import TinyDB, Query
 from lichessapi import LichessAPI, LichessError
 from basehandler import BaseHandler, BaseAPIHandler
 from diplomas import DiplomaTemplateHandler
+from tournaments import TournamentTemplateHandler
 
 from version import __version__, __revision__
 
@@ -57,6 +58,17 @@ class TournamentAPI(BaseAPIHandler):
             p['profile'] = player.get('profile', {})
         tournament['success'] = True
         self.write(json.dumps(tournament))
+
+
+class TeamsAPI(BaseAPIHandler):
+    @tornado.web.authenticated  # type: ignore[misc]
+    async def get(self) -> None:
+        self.write(json.dumps({
+            'success': True,
+            'teams': [
+                team for team in
+                await self.lichess.get_user_teams(self.token, self.current_user['username'])
+                if any(self.current_user['id'] == leader['id'] for leader in team['leaders'])]}))
 
 
 class HomeHandler(BaseHandler):
@@ -334,6 +346,8 @@ urls = [
     (r"/login", LoginHandler),
 
     (r"/api/v1/diploma/template/([-a-zA-Z0-9_=]+)", DiplomaTemplateHandler),
+    (r"/api/v1/tournament/template/([-a-zA-Z0-9_=]*)", TournamentTemplateHandler),
+    (r"/api/v1/teams", TeamsAPI),
     (r"/api/v1/tournament", TournamentAPI),
 ]
 application = tornado.web.Application(urls, **settings)

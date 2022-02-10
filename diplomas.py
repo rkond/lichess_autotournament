@@ -6,11 +6,14 @@ from tinydb import Query
 
 from tornado.options import options
 from tornado.web import HTTPError
+import tornado.web
 
 from basehandler import BaseAPIHandler
 
 
 class DiplomaTemplateHandler(BaseAPIHandler):
+
+    @tornado.web.authenticated  # type: ignore[misc]
     def get(self, id: str) -> None:
         T = Query()
         table = self.db.table('diploma_templates')
@@ -24,6 +27,7 @@ class DiplomaTemplateHandler(BaseAPIHandler):
         template.update({'success': True})
         self.write(dumps(template))
 
+    @tornado.web.authenticated  # type: ignore[misc]
     def post(self, id: str) -> None:
         value = {}
         try:

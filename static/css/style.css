@@ -36,6 +36,53 @@ main {
     padding: .2em 1em;
 }
 
+.template_list {
+  padding: 0;
+}
+
+.template_list li {
+  position: relative;
+  width: fit-content;
+  padding: 5px 24px 15px 5px;
+  list-style: none;
+  cursor: pointer;
+  border-radius: 3px;
+  border: #aaa solid 1px;
+  border-bottom: none;
+}
+.template_list li:hover {
+  background-color: #d9faff;
+}
+
+.template_list li.expanded {
+  border-bottom: #aaa solid 1px;
+  cursor: default;
+}
+
+.tournament_name {
+  margin-right: 1em;
+  font-weight: bold;
+}
+
+.tournament_date {
+  font-style: italic;
+}
+
+
+.tournament_form_field {
+  display: block;
+  margin: .1em .3em;
+  padding: .1em;
+}
+
+.tournament_form_field label::after {
+  content: ": ";
+}
+
+.tournament_form_field input[type=number]{
+  width: 55px;
+}
+
 #diploma_fields {
     width: 320px;
 }
@@ -89,8 +136,8 @@ main {
 
 .close {
     position: absolute;
-    right: 8px;
-    top: 8px;
+    right: 3px;
+    top: 3px;
     width: 12px;
     height: 12px;
     opacity: 0.3;

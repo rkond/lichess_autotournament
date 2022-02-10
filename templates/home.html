@@ -1,27 +1,23 @@
 {% extends 'base.html' %}
 
-{% block content %}
-<h1>Tournament templates</h1>
-{% if templates %}
-<ol class="template_list">
-<div class="template_box">
-    {% for tournament in templates %}
-      <li class="tournament_short">
-      {{ tournament['type'] }} |
-      {{ tournament['name'] }} |
-      {{ tournament['minutes'] }} min
-      {% if tournament.get('password') %} | Private{% end %}
-      | {{ datetime.utcfromtimestamp(tournament['startDate']).strftime("%A %H:%M") }} UTC
-      <a href="/delete/{{ tournament['id'] }}?_xsrf={{url_escape(xsrf_token)}}">Remove</a></li>
-    {% end %}
-</div>
-</ol>
+{% block head %}
+{% if handler.options.debug %}
+<script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
 {% else %}
-<p class="notice">
-  No tournaments
-</p>
+<script src="{{ static_url('js/react.production.min.js') }}" crossorigin></script>
+<script src="{{ static_url('js/react-dom.production.min.js') }}" crossorigin></script>
 {% end %}
-<a href="/add"><button class="add">Add tournament template</button></a>
+<script src="{{ static_url('js/home.js') }}"></script>
+<script>
+  const xsrf = "{{ handler.xsrf_token }}";
+  const template_id = "{{ id }}";
+</script>
+{% end %}
+
+{% block content %}
+<div id="tournament_templates">
+</div>
 {% if templates %}
 <hr>
 <h1>Create tournaments</h1>
