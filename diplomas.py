@@ -17,15 +17,19 @@ class DiplomaTemplateHandler(BaseAPIHandler):
     def get(self, id: str) -> None:
         T = Query()
         table = self.db.table('diploma_templates')
-        template = table.get((T.user == self.current_user['id']) & (T.id == id))
-        if not template:
-            raise HTTPError(404, f"No template with id \"{id}\" for user: \"{self.current_user['id']}\"")
-        del template['user']
-        del template['id']
-        if fields_file := template.get('fields_file'):
-            template['fields'] = load(open(path_join(options.db_dir, 'diplomas', fields_file)))
-        template.update({'success': True})
-        self.write(dumps(template))
+        if id:
+            template = table.get((T.user == self.current_user['id']) & (T.id == id))
+            if not template:
+                raise HTTPError(404, f"No template with id \"{id}\" for user: \"{self.current_user['id']}\"")
+            del template['user']
+            del template['id']
+            if fields_file := template.get('fields_file'):
+                template['fields'] = load(open(path_join(options.db_dir, 'diplomas', fields_file)))
+            template.update({'success': True})
+            self.write(dumps(template))
+        else:
+            templates = table.search((T.user == self.current_user['id']))
+            self.write(dumps({'success': True, 'templates': templates}))
 
     @tornado.web.authenticated  # type: ignore[misc]
     def post(self, id: str) -> None:
@@ -46,3 +50,10 @@ class DiplomaTemplateHandler(BaseAPIHandler):
         T = Query()
         table.upsert(value, (T.user == self.current_user['id']) & (T.id == id))
         self.write(dumps({'success': True}))
+
+    @tornado.web.authenticated  # type: ignore[misc]
+    def delete(self, id: str) -> None:
+        T = Query()
+        table = self.db.table('diploma_templates')
+        u = table.remove((T.user == self.current_user['id']) & (T.id == id))
+        self.write(dumps({'success': bool(u)}))

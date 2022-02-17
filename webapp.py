@@ -226,7 +226,6 @@ class DeleteHandler(BaseHandler):
         T = Query()
         table = self.db.table('templates')
         res = table.remove((T.user == self.current_user['id']) & (T.tournament_set == 'default') & (T.id == id))
-        print(res)
         self.redirect("/")
 
 
@@ -345,7 +344,7 @@ urls = [
     (r"/diplomas/(edit)/([-a-zA-Z0-9_=]+)", DiplomasHandler),
     (r"/login", LoginHandler),
 
-    (r"/api/v1/diploma/template/([-a-zA-Z0-9_=]+)", DiplomaTemplateHandler),
+    (r"/api/v1/diploma/template/([-a-zA-Z0-9_=]+)?", DiplomaTemplateHandler),
     (r"/api/v1/tournament/template/([-a-zA-Z0-9_=]*)", TournamentTemplateHandler),
     (r"/api/v1/tournament/create", TournamentCreateHandler),
     (r"/api/v1/tournament/last", TournamentCreateHandler),

@@ -18,29 +18,4 @@
 {% block content %}
 <div id="tournament_templates">
 </div>
-<hr>
-<h1>Diploma templates</h1>
-<ol class="diploma_list">
-{% for diploma in diploma_templates %}
-  <li><a href="/diplomas/edit/{{ diploma['id'] }}">{{ diploma.get('name') or 'Unnamed' }}<br><img src="{{ diploma.get('thumbnail') }}"></a><br>
-    <button class="delete_template" data-name="{{ diploma.get('name') or 'Unnamed' }}" data-link="/diplomas/delete/{{ diploma['id'] }}?_xsrf={{handler.xsrf_token}}">Delete</a></li>
-{% end %}
-</ol>
-<br>
-{% if  not diploma_templates %}
-<p>No templates</p>
-{% end %}
-<a href="/diplomas/add"><button class="add">Add diploma template</button></a>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-      document.querySelectorAll('.delete_template').forEach(function (delete_template_button) {
-        delete_template_button.addEventListener('click', (e) => {
-          if (window.confirm(`Do you want to delete template: ${e.target.dataset.name}`))
-            window.location = e.target.dataset.link;
-        })
-    });
-})
-</script>
-
 {% end %}

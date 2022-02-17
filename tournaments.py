@@ -122,7 +122,6 @@ class TournamentCreateHandler(BaseAPIHandler):
                 (T.user == self.current_user['id']) &
                 (T.tournament_set == 'default') &
                 (T.id.one_of(request.get('templates'))))
-        print(request.get('templates'))
         processed_templates = []
         errors = []
         for t in templates:
@@ -149,11 +148,9 @@ class TournamentCreateHandler(BaseAPIHandler):
             self.lichess.create_tournament(self.token, template['type'], template)
             for template in processed_templates]
         result = await gather(*req, return_exceptions=True)
-        print(processed_templates)
         created = []
         reply = {}
         for t, r in zip(processed_templates, result):
-            print(r)
             if isinstance(r, dict):
                 c = dict(r)
                 c.update({

@@ -118,7 +118,7 @@ function TournamentTemplates(props) {
     const newCreated = Array.from(created);
     const newErrors = [];
     Object.entries(createdTournaments.created).forEach(([templateId, result]) => {
-      const template = templates.find(t => t.id ==templateId);
+      const template = templates.find(t => t.id == templateId);
       if (result.success) {
         newCreated.push({
           template: template,
@@ -136,74 +136,80 @@ function TournamentTemplates(props) {
   }
 
   const [selected, setSelected] = React.useState(new Set());
-  const onSelectedTournament = (index) => {
+  const onSelectedTournament = (tournament) => {
     const s = new Set(selected);
-    if (!s.has(index))
-      s.add(index);
+    if (!s.has(tournament))
+      s.add(tournament);
     else
-      s.delete(index);
+      s.delete(tournament);
     setSelected(s);
   }
 
-
-
   return loading.loading ? e(Loader, {}) :
-    e('div', { id: 'current_templates', key: 'current_templates' },
-      e('h1', {}, "Tournament templates"),
-      templates.length ? e('ol', { className: 'template_list' },
-        templates.map((template, index) => e(TemplateBox, {
-          key: template['id'],
-          index: index,
-          template: template,
-          expanded: index == expandedIndex,
-          teams: teams,
-          onSelected: () => onSelectedTemplate(index),
-          onEdit: (template) => onEdit(index, template),
-          onDelete: () => onDelete(index),
-          onClick: () => setExpanded(index),
-          onCancel: () => setExpanded(null)
-        })),
-        e(TemplateBox, {
-          empty: true,
-          index: "new",
-          expanded: "new" == expandedIndex,
-          teams: teams,
-          onEdit: onSave,
-          onClick: () => setExpanded("new"),
-          onCancel: () => setExpanded(null)
-        })
-      ) : e('p', {}, "No tournament templates"),
-      e(TournamentCreation, {
-        templates: templates,
-        onCreated: onCreated
-      }),
+    e('div', { id: 'application_root' },
+      e('div', { className: 'current_templates' },
+        e('h1', {}, "Tournament templates"),
+        templates.length ? e('ol', { className: 'template_list' },
+          templates.map((template, index) => e(TemplateBox, {
+            key: template['id'],
+            index: index,
+            template: template,
+            expanded: index == expandedIndex,
+            teams: teams,
+            onSelected: () => onSelectedTemplate(index),
+            onEdit: (template) => onEdit(index, template),
+            onDelete: () => onDelete(index),
+            onClick: () => setExpanded(index == expandedIndex ? null : index),
+            onCancel: () => setExpanded(null)
+          })),
+          e(TemplateBox, {
+            empty: true,
+            index: "new",
+            expanded: "new" == expandedIndex,
+            teams: teams,
+            onEdit: onSave,
+            onClick: () => setExpanded("new"),
+            onCancel: () => setExpanded(null)
+          }),
+        ) : e('p', {}, "No tournament templates"),
+        e(TournamentCreation, {
+          templates: templates,
+          onCreated: onCreated
+        }),
+      ),
       e(CreatedTournaments, {
         newTournaments: created,
         errors: errors,
         selected: selected,
         onSelected: onSelectedTournament
       }),
+      e(DiplomaTemplates, {
+        selectedTournaments: selected
+      })
     )
 }
 
 function TemplateBox(props) {
   return e('li', {
     className: `tournament_short ${props.expanded ? 'expanded' : ''}`,
-    onClick: props.expanded ? null : props.onClick
   },
-    props.empty ? null : e('a', { href: '#', className: 'close', onClick: (event) => { event.preventDefault(); props.onDelete(props.index) } }),
-    props.empty ? null : e('input', {
-      type: 'checkbox',
-      className: 'tournament_select',
-      defaultChecked: Boolean(props.template.selected),
-      onClick: (event) => { event.stopPropagation(); props.onSelected() }
-    }),
-    e('span', {
-      className: "tournament_name"
-    }, props.empty ? "Create new template" : props.template.name),
-    props.empty ? null : e('span', {
-      className: "tournament_date"
-    }, new Date(props.template.startDate * 1000).toLocaleTimeString(undefined, { weekday: 'long', hour: 'numeric', minute: 'numeric' })),
+    e('div', {
+      className: 'tournament_header',
+      onClick: props.onClick
+    },
+      props.empty ? null : e('a', { href: '#', className: 'close', onClick: (event) => { event.preventDefault(); props.onDelete(props.index) } }),
+      props.empty ? null : e('input', {
+        type: 'checkbox',
+        className: 'tournament_select',
+        defaultChecked: Boolean(props.template.selected),
+        onClick: (event) => { event.stopPropagation(); props.onSelected() }
+      }),
+      e('span', {
+        className: "tournament_name",
+      }, props.empty ? "Create new template" : props.template.name),
+      props.empty ? null : e('span', {
+        className: "tournament_date"
+      }, new Date(props.template.startDate * 1000).toLocaleTimeString(undefined, { weekday: 'long', hour: 'numeric', minute: 'numeric' }))),
     props.expanded ? e(TemplateEditor, {
       teams: props.teams,
       fields: props.empty ? {} : props.template,
@@ -251,7 +257,7 @@ function TemplateEditor(props) {
         if (res.success) {
           delete res.success;
           res.startDate = (new Date(res.startsAt)).getTime() / 1000;
-          res.name = res.fullName.endsWith(" Arena")?res.fullName.slice(0,-6): res.fullName;
+          res.name = res.fullName.endsWith(" Arena") ? res.fullName.slice(0, -6) : res.fullName;
           res.clockTime = parseInt(res.clock.limit) / 60;
           res.clockIncrement = res.clock.increment;
           res.streakable = !res.noStreak;
@@ -608,7 +614,7 @@ function TournamentCreation(props) {
   }
 
   const pastTemplates = props.templates.reduce((a, t, index) => {
-    const startDate = (t.startDate - t.startDate % 60)*1000;
+    const startDate = (t.startDate - t.startDate % 60) * 1000;
     const tournamentStart = week + (startDate - monday(new Date(startDate)).getTime());
     if (tournamentStart < now.getTime())
       a.add(t.id);
@@ -636,7 +642,7 @@ function TournamentCreation(props) {
       disabled: selectedIds.length == 0 || selectedIds.some(i => pastTemplates.has(i)) || creating,
       onClick: () => createTournaments(true)
     }, `Create ${selectedIds.length} tournament${selectedIds.length != 1 ? 's' : ''}  for selected templates`),
-    pastTemplates.size > 0 ? e('p', {className: 'error'}, "Some tournaments for this week are already in the past") : null,
+    pastTemplates.size > 0 ? e('p', { className: 'error' }, "Some tournaments for this week are already in the past") : null,
   )
 }
 
@@ -665,35 +671,36 @@ function CreatedTournaments(props) {
   });
 
   return e('div', {
-    className: 'cretaed_torunaments'
+    className: 'created_tournaments'
   },
+    e('h1', {}, "Created tournaments"),
     props.errors.length || props.newTournaments.length ? [
-    e('h3', {key:'header'}, "Recently created:"),
-    e('ol', {
-      className: 'tournament_list',
-      key: 'list'
-    },
-      props.errors.map(err => e('li', {className: 'error', key: err.template.id}, `${err.template.name}: ${err.error}`)),
-      props.newTournaments.map(t =>  e(TorunamentLine, {
-        key: t.tournament.id,
-        tournament: t.tournament,
-        highlight: true,
-        selectable: false
-      })))]:null,
+      e('h3', { key: 'header' }, "Recently created:"),
+      e('ol', {
+        className: 'tournament_list',
+        key: 'list'
+      },
+        props.errors.map(err => e('li', { className: 'error', key: err.template.id }, `${err.template.name}: ${err.error}`)),
+        props.newTournaments.map(t => e(TorunamentLine, {
+          key: t.tournament.id,
+          tournament: t.tournament,
+          highlight: true,
+          selectable: false
+        })))] : null,
     e('h3', {}, "Created prevoiusly:"),
     e('ol', {
       className: 'tournament_list',
-      start: page*pageSize + 1
+      start: page * pageSize + 1
     },
-    loading.loading ? e(Loader, {}) : (tournaments.length == 0 ? "Nothing here" :
-      tournaments.slice(page * pageSize, (page + 1) * pageSize).map((t, index) => e(TorunamentLine, {
-        key: t.id,
-        tournament: t,
-        highlight: t.success,
-        selectable: true,
-        selected: props.selected.has(index+page*pageSize),
-        onSelected: () => props.onSelected(index+page*pageSize)
-      })))
+      loading.loading ? e(Loader, {}) : (tournaments.length == 0 ? "Nothing here" :
+        tournaments.slice(page * pageSize, (page + 1) * pageSize).map((t, index) => e(TorunamentLine, {
+          key: t.id,
+          tournament: t,
+          highlight: t.success,
+          selectable: true,
+          selected: props.selected.has(t),
+          onSelected: () => props.onSelected(t)
+        })))
     ),
     e('button', {
       className: 'button_paging button_left',
@@ -708,26 +715,111 @@ function CreatedTournaments(props) {
   )
 }
 
+function getTournamentURL(tournament) {
+  return `https://lichess.org/${tournament.system == 'arena' ? 'tournament' : 'swiss'}/${tournament.id}`
+}
+
 function TorunamentLine(props) {
   return e('li', {
-    className: `tornament_line ${props.tournament.highlight?'highlight':''}`
+    className: `tornament_line ${props.tournament.highlight ? 'highlight' : ''}`
   },
-  props.selectable?e('input', {
-    type: 'checkbox',
-    className: 'tournament_select',
-    checked: props.selected,
-    onChange: (event) => { event.stopPropagation(); props.onSelected() }
-  }):null,
-  e('a', {
-    href: `https://lichess.org/${props.tournament.system=='arena'?'tournament':'swiss'}/${props.tournament.id}`
-  },
+    props.selectable ? e('input', {
+      type: 'checkbox',
+      className: 'tournament_select',
+      checked: props.selected,
+      onChange: (event) => { event.stopPropagation(); props.onSelected() }
+    }) : null,
+    e('a', {
+      href: getTournamentURL(props.tournament)
+    },
+      e('span', {
+        className: "tournament_name"
+      }, props.tournament.fullName)),
     e('span', {
-      className: "tournament_name"
-    }, props.tournament.fullName)),
-  e('span', {
-    className: "tournament_date"
-  }, new Date(props.tournament.startsAt).toLocaleTimeString(undefined, { hour12: false, hour: '2-digit', minute: '2-digit' , year: 'numeric', month: 'short', day:'numeric', weekday:'short'})
-  ))
+      className: "tournament_date"
+    }, new Date(props.tournament.startsAt).toLocaleTimeString(undefined, { hour12: false, hour: '2-digit', minute: '2-digit', year: 'numeric', month: 'short', day: 'numeric', weekday: 'short' })
+    ))
+}
+
+function DiplomaTemplates(props) {
+  const [diplomas, setDiplomas] = React.useState([]);
+  const [loading, setLoading] = React.useState({ request: false, loading: true });
+
+  React.useLayoutEffect(() => {
+    if (loading.request)
+      return
+    setLoading({ request: true, loading: true });
+    fetch(`/api/v1/diploma/template/`, {
+      credentials: 'include',
+    })
+      .then(res => res.json())
+      .catch(() => null)
+      .then(res => {
+        if (res.templates && res.success) {
+          setDiplomas(res.templates);
+        }
+        setLoading({ request: true, loading: false });
+      });
+  });
+
+  const onDelete = (template) => {
+    if (!window.confirm(`Do you want to delete template: ${template.name}`))
+      return;
+    fetch(`/api/v1/diploma/template/${template.id}?_xsrf=${xsrf}`, {
+      credentials: 'include',
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'appication/json'
+      }
+    })
+      .then(res => res.json())
+      .then(res => {
+        if (!res.success) {
+          console.error(res);
+          return;
+        }
+        setLoading({ request: false, loading: true });
+      });
+  }
+
+  const onApply = (template) => {
+    window.location.href = `/diplomas/edit/${template.id}?${(new URLSearchParams(Array.from(props.selectedTournaments).map(tournament => ['u', getTournamentURL(tournament)]))).toString()}`;
+  }
+
+  return e('div', {
+    className: 'diploma_templates'
+  },
+    e('h1', {}, "Diploma templates"),
+    e('ol', {
+      className: 'diploma_list',
+    },
+      loading.loading ? e(Loader, {}) : (diplomas.length == 0 ? "Nothing here" :
+        diplomas.map(t => e('li', {
+          className: 'diploma_template',
+          key: t.id
+        },
+          e('a', {
+            href: `/diplomas/edit/${t.id}`
+          },
+            t.name ? t.name : "Unnamed",
+            e('br', {}),
+            e('img', {
+              src: t.thumbnail
+            }),
+            e('br', {}),
+          ),
+          e('button', {
+            disabled: props.selectedTournaments.size == 0,
+            onClick: () => onApply(t)
+          }, "Apply to", e('br', {}), "selected"),
+          e('br', {}),
+          e('button', {
+            onClick: () => onDelete(t)
+          }, "Delete"))))),
+    e('button', {
+      onClick: () => { window.location = '/diplomas/add'; }
+    }, "Add diploma template")
+  )
 }
 
 function Loader(props) {
