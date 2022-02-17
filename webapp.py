@@ -7,9 +7,7 @@ from asyncio import gather
 from urllib.parse import urlsplit
 from secrets import token_urlsafe
 from pathlib import Path
-from datetime import datetime, timedelta, timezone
-
-from typing import cast
+from datetime import datetime, timedelta
 
 import tornado.httpserver
 import tornado.ioloop
@@ -20,7 +18,7 @@ import tornado.escape
 
 from tinydb import TinyDB, Query
 
-from lichessapi import LichessAPI, LichessError
+from lichessapi import LichessAPI
 from basehandler import BaseHandler, BaseAPIHandler
 from diplomas import DiplomaTemplateHandler
 from tournaments import TournamentTemplateHandler, TournamentCreateHandler
@@ -92,161 +90,6 @@ class HomeHandler(BaseHandler):
             this_monday=get_this_monday(datetime.utcnow()),
             xsrf_token=self.xsrf_token
             )
-
-
-class AddHandler(BaseHandler):
-    @tornado.web.authenticated  # type: ignore[misc]
-    async def get(self) -> None:
-        self.render(
-            'add.html',
-            teams=(
-                team for team in
-                await self.lichess.get_user_teams(self.token, self.current_user['username'])
-                if any(self.current_user['id'] == leader['id'] for leader in team['leaders'])),
-            errors=[]
-            )
-
-    @tornado.web.authenticated  # type: ignore[misc]
-    async def post(self) -> None:
-        errors = []
-        template_tournament_url = self.get_argument('tournament')
-        if not template_tournament_url:
-            errors.append('No tournament URL')
-            self.render('add.html', errors=errors)
-            return
-        scheme, netloc, path, query, fragment = urlsplit(template_tournament_url)
-        paths = path.split('/')
-        if netloc != 'lichess.org' or len(paths) < 2:
-            errors.append('Invalid tournament URL')
-        else:
-            id = paths[-1]
-            if paths[-2] == 'tournament':
-                type = 'arena'
-            elif paths[-2] == 'swiss':
-                type = 'swiss'
-            else:
-                errors.append('Invalid tournament type')
-        if errors:
-            self.render('add.html', errors=errors)
-            return
-        tournament = await self.lichess.get_tournament(self.token, type, id, self.options.team_id)  # noqa: E501
-        logging.debug(f"Adding template tournament: {tournament}")
-
-        if type == 'arena':
-            t = {
-                'type': type,
-                'name': cast(str, tournament.get('fullName'))[:-6],
-                'clockTime': tournament.get('clock', {}).get('limit'),
-                'clockIncrement': tournament.get('clock', {}).get('increment'),
-                'minutes': tournament.get('minutes'),
-                'startDate': datetime.fromisoformat(tournament.get('startsAt').strip('Z')).replace(tzinfo=timezone.utc).timestamp(),  # type:ignore[attr-defined, union-attr]  # noqa: E501
-                'variant': tournament.get('variant'),
-                'rated': bool(self.get_argument('rated', False)),
-                'berserkable': bool(self.get_argument('berserkable', False)),
-                'streakable': bool(self.get_argument('streakable', False)),
-                'hasChat': bool(self.get_argument('chat', False)),
-                'description': tournament.get('description'),
-                'password': self.get_argument('password', ''),
-                'conditions.teamMember.teamId': self.get_argument('team', ''),
-                'conditions.minRating.rating': int(self.get_argument('min_rating') or -1),
-                'conditions.maxRating.rating': int(self.get_argument('max_rating') or -1),
-                'conditions.nbRatedGame.nb': int(self.get_argument('rated_games') or -1),
-            }
-        t.update({
-            'id': token_urlsafe(),
-            'user': self.current_user['id'],
-            'tournament_set': 'default'
-        })
-        table = self.db.table('templates')
-        table.insert(t)
-        self.redirect('/')
-        return
-
-
-class CreateHandler(BaseHandler):
-    @tornado.web.authenticated  # type: ignore[misc]
-    async def post(self) -> None:
-        week = datetime.utcfromtimestamp(float(self.get_argument('week')))
-        T = Query()
-        table = self.db.table('templates')
-        tournaments = table.search((T.user == self.current_user['id']) & (T.tournament_set == 'default'))
-        templates = []
-        errors = []
-        for tournament in tournaments:
-            template = dict(tournament)
-            if template['type'] == 'arena':
-                if template['conditions.minRating.rating'] == -1:
-                    del template['conditions.minRating.rating']
-                if template['conditions.maxRating.rating'] == -1:
-                    del template['conditions.maxRating.rating']
-                if template['conditions.nbRatedGame.nb'] == -1:
-                    del template['conditions.nbRatedGame.nb']
-                if not template['password']:
-                    del template['password']
-
-                start_date = datetime.utcfromtimestamp(template['startDate'] - (template['startDate'] % 60))
-                start_offset = start_date - get_this_monday(start_date)
-                tournamentStart = get_this_monday(week) + start_offset
-                if tournamentStart <= datetime.utcnow():
-                    errors.append(f"Cannot create tournament {template['name']} as it would start in the past")
-                    continue
-                template['startDate'] = int(tournamentStart.timestamp())*1000
-            templates.append(template)
-        req = [self.lichess.create_tournament(self.token, template['type'], template) for template in templates]
-        try:
-            res = await gather(*req)
-        except LichessError as err:
-            errors.append(err.message)
-            self.render(
-                'tournaments.html',
-                errors=errors,
-                tournaments=[]
-            )
-            return
-        for t, r in zip(tournaments, res):
-            r.update({
-                'user': self.current_user['id'],
-                'tournament_set': 'default',
-                'template': t.get('id'),
-                'created': datetime.utcnow().timestamp()
-            })
-        table = self.db.table('tournaments')
-        table.insert_multiple(res)
-        self.render(
-            'tournaments.html',
-            errors=errors,
-            tournaments=zip(tournaments, res)
-        )
-
-
-class DeleteHandler(BaseHandler):
-    @tornado.web.authenticated  # type: ignore[misc]
-    async def get(self, id: str) -> None:
-        self.check_xsrf_cookie()
-        T = Query()
-        table = self.db.table('templates')
-        res = table.remove((T.user == self.current_user['id']) & (T.tournament_set == 'default') & (T.id == id))
-        self.redirect("/")
-
-
-class TournamentsHandler(BaseHandler):
-    @tornado.web.authenticated  # type: ignore[misc]
-    async def get(self) -> None:
-        T = Query()
-        table = self.db.table('templates')
-        templates = table.search((T.user == self.current_user['id']) & (T.tournament_set == 'default'))
-        table = self.db.table('tournaments')
-        tournaments = table.search((T.user == self.current_user['id']) & (T.tournament_set == 'default'))
-        templates_dict = dict((t['id'], t) for t in templates)
-        table = self.db.table('diploma_templates')
-        diploma_templates = table.search(T.user == self.current_user['id'])
-
-        self.render(
-            'tournaments.html',
-            errors=[],
-            diploma_templates=diploma_templates,
-            tournaments=[(templates_dict.get(t['template']), t) for t in tournaments if templates_dict.get(t['template'])]  # noqa: E501
-        )
 
 
 class DiplomasHandler(BaseHandler):
@@ -335,10 +178,6 @@ settings = {
 urls = [
     (r"/static/(.*)", tornado.web.StaticFileHandler, {"path": options.static_path}),
     (r"/", HomeHandler),
-    (r"/add", AddHandler),
-    (r"/delete/(.*)", DeleteHandler),
-    (r"/create", CreateHandler),
-    (r"/tournaments", TournamentsHandler),
     (r"/diplomas/(add)", DiplomasHandler),
     (r"/diplomas/(delete)/([-a-zA-Z0-9_=]+)", DiplomasHandler),
     (r"/diplomas/(edit)/([-a-zA-Z0-9_=]+)", DiplomasHandler),
