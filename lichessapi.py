@@ -152,7 +152,7 @@ class LichessAPI():
             for k, v in template_dict.items():
                 if isinstance(v, bool):
                     template_dict[k] = str(v).lower()
-            template_dict['clockTime'] = f'{template_dict["clockTime"]/60:.1f}'
+            template_dict['clockTime'] = f'{int(template_dict["clockTime"])/60:.1f}'
             return cast(Dict[str, Any], await self._make_request(
                 f'{self.ARENA_URL}',
                 method='POST',

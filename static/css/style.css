@@ -36,6 +36,10 @@ main {
     padding: .2em 1em;
 }
 
+button {
+  margin: .1em .5em;
+}
+
 .template_list {
   padding: 0;
 }
@@ -57,6 +61,10 @@ main {
 .template_list li.expanded {
   border-bottom: #aaa solid 1px;
   cursor: default;
+}
+
+.template_list li:last-child {
+  border-bottom: #aaa solid 1px;;
 }
 
 .tournament_name {
@@ -81,6 +89,11 @@ main {
 
 .tournament_form_field input[type=number]{
   width: 55px;
+}
+
+.tournament_creation button {
+  font-size: large;
+  width: 220px;
 }
 
 #diploma_fields {
@@ -175,6 +188,15 @@ input[type=color] {
     width: 320px;
     padding-right: 24px;
     list-style: none;
+}
+
+.tournament_line.highlight {
+  background-color: #b0e7f0;
+}
+
+.button_paging {
+  font-size: larger;
+  padding: 0 2em;
 }
 
 .diploma_preview_canvas {

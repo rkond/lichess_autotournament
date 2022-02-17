@@ -23,7 +23,7 @@ from tinydb import TinyDB, Query
 from lichessapi import LichessAPI, LichessError
 from basehandler import BaseHandler, BaseAPIHandler
 from diplomas import DiplomaTemplateHandler
-from tournaments import TournamentTemplateHandler
+from tournaments import TournamentTemplateHandler, TournamentCreateHandler
 
 from version import __version__, __revision__
 
@@ -347,6 +347,8 @@ urls = [
 
     (r"/api/v1/diploma/template/([-a-zA-Z0-9_=]+)", DiplomaTemplateHandler),
     (r"/api/v1/tournament/template/([-a-zA-Z0-9_=]*)", TournamentTemplateHandler),
+    (r"/api/v1/tournament/create", TournamentCreateHandler),
+    (r"/api/v1/tournament/last", TournamentCreateHandler),
     (r"/api/v1/teams", TeamsAPI),
     (r"/api/v1/tournament", TournamentAPI),
 ]

@@ -86,10 +86,6 @@ function TournamentTemplates(props) {
       });
   }
 
-  const onAdd = () => {
-    setExpanded('new');
-  }
-
   const onSave = (template) => {
     fetch(`/api/v1/tournament/template/?_xsrf=${xsrf}`, {
       credentials: 'include',
@@ -110,6 +106,47 @@ function TournamentTemplates(props) {
       });
   }
 
+  const onSelectedTemplate = (index) => {
+    const newTemplates = Array.from(templates);
+    newTemplates[index].selected = !templates[index].selected;
+    setTemplates(newTemplates);
+  }
+
+  const [created, setCreated] = React.useState([])
+  const [errors, setErrors] = React.useState([])
+  const onCreated = (createdTournaments) => {
+    const newCreated = Array.from(created);
+    const newErrors = [];
+    Object.entries(createdTournaments.created).forEach(([templateId, result]) => {
+      const template = templates.find(t => t.id ==templateId);
+      if (result.success) {
+        newCreated.push({
+          template: template,
+          tournament: result
+        })
+      } else {
+        newErrors.push({
+          template: template,
+          error: result.error
+        })
+      }
+    });
+    setCreated(newCreated);
+    setErrors(newErrors);
+  }
+
+  const [selected, setSelected] = React.useState(new Set());
+  const onSelectedTournament = (index) => {
+    const s = new Set(selected);
+    if (!s.has(index))
+      s.add(index);
+    else
+      s.delete(index);
+    setSelected(s);
+  }
+
+
+
   return loading.loading ? e(Loader, {}) :
     e('div', { id: 'current_templates', key: 'current_templates' },
       e('h1', {}, "Tournament templates"),
@@ -120,6 +157,7 @@ function TournamentTemplates(props) {
           template: template,
           expanded: index == expandedIndex,
           teams: teams,
+          onSelected: () => onSelectedTemplate(index),
           onEdit: (template) => onEdit(index, template),
           onDelete: () => onDelete(index),
           onClick: () => setExpanded(index),
@@ -134,7 +172,17 @@ function TournamentTemplates(props) {
           onClick: () => setExpanded("new"),
           onCancel: () => setExpanded(null)
         })
-      ) : e('p', {}, "No tournament templates")
+      ) : e('p', {}, "No tournament templates"),
+      e(TournamentCreation, {
+        templates: templates,
+        onCreated: onCreated
+      }),
+      e(CreatedTournaments, {
+        newTournaments: created,
+        errors: errors,
+        selected: selected,
+        onSelected: onSelectedTournament
+      }),
     )
 }
 
@@ -143,7 +191,13 @@ function TemplateBox(props) {
     className: `tournament_short ${props.expanded ? 'expanded' : ''}`,
     onClick: props.expanded ? null : props.onClick
   },
-    props.empty ? null : e('a', { href: '#', className: "close", onClick: (event) => { event.preventDefault(); props.onDelete(props.index) } }),
+    props.empty ? null : e('a', { href: '#', className: 'close', onClick: (event) => { event.preventDefault(); props.onDelete(props.index) } }),
+    props.empty ? null : e('input', {
+      type: 'checkbox',
+      className: 'tournament_select',
+      defaultChecked: Boolean(props.template.selected),
+      onClick: (event) => { event.stopPropagation(); props.onSelected() }
+    }),
     e('span', {
       className: "tournament_name"
     }, props.empty ? "Create new template" : props.template.name),
@@ -197,8 +251,8 @@ function TemplateEditor(props) {
         if (res.success) {
           delete res.success;
           res.startDate = (new Date(res.startsAt)).getTime() / 1000;
-          res.name = res.fullName;
-          res.clockTime = res.clock.limit / 60;
+          res.name = res.fullName.endsWith(" Arena")?res.fullName.slice(0,-6): res.fullName;
+          res.clockTime = parseInt(res.clock.limit) / 60;
           res.clockIncrement = res.clock.increment;
           res.streakable = !res.noStreak;
           res.verdicts.list.forEach(v => {
@@ -267,6 +321,7 @@ function TemplateEditor(props) {
     e(TournamentTextField, {
       name: 'name',
       label: "Tournament name",
+      maxLength: 30,
       value: fields.name,
       changeField: changeField
     }),
@@ -414,6 +469,7 @@ function TournamentTextField(props) {
     e('input', {
       type: 'text',
       value: props.value,
+      maxLength: props.maxLength,
       onChange: (event) => props.changeField(props.name, event.target.value)
     }));
 }
@@ -495,6 +551,183 @@ function TournamentSelectField(props) {
         value: option.value,
         key: index
       }, option.text))));
+}
+
+function TournamentCreation(props) {
+  const selectedIds = props.templates.reduce((a, t) => {
+    if (t.selected)
+      a.push(t.id);
+    return a;
+  }, []);
+
+  const [creating, setCreating] = React.useState(false);
+  const now = new Date();
+  const monday = (date) => {
+    const d = new Date(date.setDate(date.getDate() - (date.getDay() + 6) % 7))
+    d.setUTCHours(0);
+    d.setUTCMinutes(0);
+    d.setUTCSeconds(0);
+    d.setUTCMilliseconds(0);
+    return d;
+  };
+  const nextWeek = (date) => new Date(date.setDate(date.getDate() + 7));
+  const nextSunday = (date) => new Date(date.setDate(date.getDate() + 6));
+
+  let m = monday(new Date());
+  const [week, setWeek] = React.useState(m.getTime());
+  const weeks = [];
+  for (let i = 0; i < 6; i++) {
+    weeks.push({
+      week: m.getTime(),
+      name: `${m.toLocaleDateString(undefined, { dateStyle: 'medium' })} – ${nextSunday(m).toLocaleDateString(undefined, { dateStyle: 'medium' })}`
+    });
+    m = nextWeek(m);
+  }
+
+  const createTournaments = (selectedOnly) => {
+    setCreating(true);
+    fetch(`/api/v1/tournament/create?_xsrf=${xsrf}`, {
+      credentials: 'include',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'appication/json'
+      },
+      body: JSON.stringify({
+        week: week / 1000,
+        templates: selectedIds.length && selectedOnly ? selectedIds : undefined
+      })
+    })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success)
+          props.onCreated(res);
+        else
+          alert(`Torunaments not created: ${res.error}`);
+      })
+      .finally(() => setCreating(false));
+  }
+
+  const pastTemplates = props.templates.reduce((a, t, index) => {
+    const startDate = (t.startDate - t.startDate % 60)*1000;
+    const tournamentStart = week + (startDate - monday(new Date(startDate)).getTime());
+    if (tournamentStart < now.getTime())
+      a.add(t.id);
+    return a;
+  }, new Set());
+
+  return e('div', { className: "tournament_creation" },
+    e('p', {},
+      e('label', {
+        htmlFor: 'creation_week'
+      }, "Create tournaments for week: "),
+      e('select', {
+        id: 'creation_week',
+        value: week,
+        onChange: (event) => setWeek(parseInt(event.target.value))
+      }, weeks.map(w => e('option', {
+        value: w.week,
+        key: w.week,
+      }, w.name)))),
+    e('button', {
+      disabled: props.templates.length == 0 || pastTemplates.size > 0 || creating,
+      onClick: () => createTournaments(false)
+    }, "Create tournaments for all templates"),
+    e('button', {
+      disabled: selectedIds.length == 0 || selectedIds.some(i => pastTemplates.has(i)) || creating,
+      onClick: () => createTournaments(true)
+    }, `Create ${selectedIds.length} tournament${selectedIds.length != 1 ? 's' : ''}  for selected templates`),
+    pastTemplates.size > 0 ? e('p', {className: 'error'}, "Some tournaments for this week are already in the past") : null,
+  )
+}
+
+function CreatedTournaments(props) {
+  const pageSize = 20;
+
+  const [tournaments, setTournaments] = React.useState([]);
+  const [page, setPage] = React.useState(0);
+  const [loading, setLoading] = React.useState({ request: false, loading: true });
+
+  React.useLayoutEffect(() => {
+    if (loading.request)
+      return
+    setLoading({ request: true, loading: true });
+    fetch(`/api/v1/tournament/last`, {
+      credentials: 'include',
+    })
+      .then(res => res.json())
+      .catch(() => null)
+      .then(res => {
+        if (res.tournaments && res.success) {
+          setTournaments(res.tournaments);
+        }
+        setLoading({ request: true, loading: false });
+      });
+  });
+
+  return e('div', {
+    className: 'cretaed_torunaments'
+  },
+    props.errors.length || props.newTournaments.length ? [
+    e('h3', {key:'header'}, "Recently created:"),
+    e('ol', {
+      className: 'tournament_list',
+      key: 'list'
+    },
+      props.errors.map(err => e('li', {className: 'error', key: err.template.id}, `${err.template.name}: ${err.error}`)),
+      props.newTournaments.map(t =>  e(TorunamentLine, {
+        key: t.tournament.id,
+        tournament: t.tournament,
+        highlight: true,
+        selectable: false
+      })))]:null,
+    e('h3', {}, "Created prevoiusly:"),
+    e('ol', {
+      className: 'tournament_list',
+      start: page*pageSize + 1
+    },
+    loading.loading ? e(Loader, {}) : (tournaments.length == 0 ? "Nothing here" :
+      tournaments.slice(page * pageSize, (page + 1) * pageSize).map((t, index) => e(TorunamentLine, {
+        key: t.id,
+        tournament: t,
+        highlight: t.success,
+        selectable: true,
+        selected: props.selected.has(index+page*pageSize),
+        onSelected: () => props.onSelected(index+page*pageSize)
+      })))
+    ),
+    e('button', {
+      className: 'button_paging button_left',
+      disabled: page == 0,
+      onClick: () => setPage(page - 1)
+    }, "<"),
+    e('button', {
+      className: 'button_paging button_right',
+      disabled: (page + 1) * pageSize >= tournaments.length,
+      onClick: () => setPage(page + 1)
+    }, ">"),
+  )
+}
+
+function TorunamentLine(props) {
+  return e('li', {
+    className: `tornament_line ${props.tournament.highlight?'highlight':''}`
+  },
+  props.selectable?e('input', {
+    type: 'checkbox',
+    className: 'tournament_select',
+    checked: props.selected,
+    onChange: (event) => { event.stopPropagation(); props.onSelected() }
+  }):null,
+  e('a', {
+    href: `https://lichess.org/${props.tournament.system=='arena'?'tournament':'swiss'}/${props.tournament.id}`
+  },
+    e('span', {
+      className: "tournament_name"
+    }, props.tournament.fullName)),
+  e('span', {
+    className: "tournament_date"
+  }, new Date(props.tournament.startsAt).toLocaleTimeString(undefined, { hour12: false, hour: '2-digit', minute: '2-digit' , year: 'numeric', month: 'short', day:'numeric', weekday:'short'})
+  ))
 }
 
 function Loader(props) {
