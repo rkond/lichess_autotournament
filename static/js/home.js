@@ -647,7 +647,7 @@ function TournamentCreation(props) {
 }
 
 function CreatedTournaments(props) {
-  const pageSize = 20;
+  const pageSize = 16;
 
   const [tournaments, setTournaments] = React.useState([]);
   const [page, setPage] = React.useState(0);
@@ -721,7 +721,7 @@ function getTournamentURL(tournament) {
 
 function TorunamentLine(props) {
   return e('li', {
-    className: `tornament_line ${props.tournament.highlight ? 'highlight' : ''}`
+    className: `tournament_list_line ${props.tournament.highlight ? 'highlight' : ''}`
   },
     props.selectable ? e('input', {
       type: 'checkbox',
