@@ -1,7 +1,13 @@
 logging='debug'
 debug=False
-cookie_secret='CHANGE_THIS_IN_PRODUCTION'
+
+bind = '127.0.0.1'
+port = 14742
+
+user='www-data'
+group='www-data'
+cookie_secret='CHANGE_THIS_IN_PRODUCTION'  # Generate secure random string
 db_dir='/var/lib/lichess'
-lichess_client_id='CHANGE_THIS_IN_PRODUCTION'
-team_id='imatran-shakki-online-chess-club'
+lichess_client_id='CHANGE_THIS_IN_PRODUCTION'  # Any unique value will do
+team_id='team-id-for-swiss-tournaments'
 base_url='https://lichess.example.com'
