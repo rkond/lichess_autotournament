@@ -92,6 +92,7 @@ class DiplomaConfiguration extends React.Component {
             })));
     };
     return [
+      e('h1', {key: 'header'},  "Diploma template"),
       e('label', { key: 'template-name-label', htmlFor: 'template_name' }, "Name: "),
       e('input', { key: 'template-name-input', id: 'template_name', type: 'text', defaultValue: this.state.name, placeholder: 'Diploma Template 1', onChange: event => { this.setState({ name: event.target.value }) } }),
       e('h3', { key: "diploma_config_header", className: "diploma_config_header" }, "Diploma fields"),
