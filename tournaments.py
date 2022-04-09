@@ -100,7 +100,7 @@ class TournamentCreateHandler(BaseAPIHandler):
         T = Query()
         table = self.db.table('tournaments')
         tournaments = table.search((T.user == self.current_user['id']) & (T.tournament_set == 'default'))
-        tournaments.sort(key=lambda t: t['created'], reverse=True)
+        tournaments.sort(key=lambda t: t.get('created', 0), reverse=True)
         self.write(dumps({'success': True, 'tournaments': tournaments}))
 
     @tornado.web.authenticated  # type: ignore[misc]

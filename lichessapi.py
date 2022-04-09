@@ -69,6 +69,7 @@ class LichessAPI():
             message = str(loads(res.body.decode())['error'])
         except ValueError:
             logging.exception("Error decoding lichess response")
+        logging.error(f"Lichess API error: {res.code}, {message}")
         raise LichessError(res.code, message)
 
     def get_authorize_url(self,  scope: List[str], state: Optional[str] = None) -> Tuple[str, str]:
