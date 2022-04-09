@@ -66,7 +66,7 @@ class LichessAPI():
             return cast(Dict[str, Any], loads(res.body.decode()))
         message = f"Bad Lichess Request: {res.body.decode() if res.body else ''}"
         try:
-            message = str(loads(res.body.decode())['error'])
+            message = str(loads(res.body.decode()).get('error_description'))
         except ValueError:
             logging.exception("Error decoding lichess response")
         logging.error(f"Lichess API error: {res.code}, {message}")

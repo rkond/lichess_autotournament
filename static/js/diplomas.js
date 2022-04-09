@@ -578,7 +578,8 @@ function DiplomasLine(props) {
               height: props.canvas.getHeight() * 4
             });
           tempCanvas.setZoom(4);
-          window.open(tempCanvas.toDataURL(), '_blank').focus()
+          const newWindow = window.open("")
+          newWindow.document.write(`<img src="${tempCanvas.toDataURL()}">`);
         });
       }
     },
