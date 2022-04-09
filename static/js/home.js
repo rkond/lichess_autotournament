@@ -528,8 +528,9 @@ function TournamentDatetimeField(props) {
     e('select', {
       value: weekday,
       onChange: (event) => {
-        setWeekday(parseInt(event.target.value));
-        props.changeField(props.name, (new Date(`2022-01-0${weekday + 3}T${time}`).getTime() / 1000))
+        const newWeekday = parseInt(event.target.value);
+        setWeekday(newWeekday);
+        props.changeField(props.name, (new Date(`2022-01-0${newWeekday + 3}T${time}`).getTime() / 1000))
       }
     }, weekdays.map((day, index) =>
       e('option', {
@@ -541,7 +542,7 @@ function TournamentDatetimeField(props) {
       value: time,
       onChange: (event) => {
         setTime(event.target.value);
-        props.changeField(props.name, (new Date(`2022-01-0${weekday + 3}T${time}`).getTime() / 1000))
+        props.changeField(props.name, (new Date(`2022-01-0${weekday + 3}T${event.target.value}`).getTime() / 1000))
       }
     }));
 }
@@ -729,16 +730,20 @@ function TorunamentLine(props) {
       checked: props.selected,
       onChange: (event) => { event.stopPropagation(); props.onSelected() }
     }) : null,
+    props.tournament.fullName, " ",
+    e('span', {
+      className: "tournament_date"
+    }, new Date(props.tournament.startsAt).toLocaleTimeString(undefined, { hour12: false, hour: '2-digit', minute: '2-digit', year: 'numeric', month: 'short', day: 'numeric', weekday: 'short' })
+    ),
+    e('br',{}),
     e('a', {
       href: getTournamentURL(props.tournament)
     },
       e('span', {
         className: "tournament_name"
-      }, props.tournament.fullName)),
-    e('span', {
-      className: "tournament_date"
-    }, new Date(props.tournament.startsAt).toLocaleTimeString(undefined, { hour12: false, hour: '2-digit', minute: '2-digit', year: 'numeric', month: 'short', day: 'numeric', weekday: 'short' })
-    ))
+      }, getTournamentURL(props.tournament))),
+
+    )
 }
 
 function DiplomaTemplates(props) {
