@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from json import loads, dumps
+from math import floor
 from secrets import token_urlsafe
 from typing import Any, Dict, cast
 from asyncio import gather
@@ -23,6 +24,15 @@ class TournamentTemplateHandler(BaseAPIHandler):
          'conditions.nbRatedGame.nb')
     }
 
+    @staticmethod
+    def convert_clock_time(seconds: int) -> str:
+        minutes = seconds/60
+        if minutes == floor(minutes):
+            return f'{int(minutes)}'
+        if minutes*10 == floor(minutes*10):
+            return f'{minutes:.1f}'
+        return f'{minutes:.2f}'
+
     @classmethod
     def filter_allowed_fields(cls, tournament: Dict[str, Any]) -> Dict[str, Any]:
         return {k: v for k, v in tournament.items() if k in cls.ALLOWED_FIELDS[tournament['type']]} if tournament['type'] in cls.ALLOWED_FIELDS else {}  # noqa: E501
@@ -41,13 +51,14 @@ class TournamentTemplateHandler(BaseAPIHandler):
                     f"No template with id \"{id}\" for user: \"{self.current_user['id']}\""
                 )
             template = self.filter_allowed_fields(template)
-            template['clockTime'] = f'{int(template["clockTime"])/60:.1f}'
+            template['clockTime'] = self.convert_clock_time(template["clockTime"])
             self.write(dumps({'tournament': self.filter_allowed_fields(template), 'success': True}))
         else:
             templates = table.search((T.user == self.current_user['id'])
                                      & (T.tournament_set == 'default'))
             res = [self.filter_allowed_fields(t) for t in templates]
-
+            for t in res:
+                t['clockTime'] = self.convert_clock_time(t["clockTime"])
             self.write(dumps({'templates': res, 'success': True}))
 
     @tornado.web.authenticated  # type: ignore[misc]
