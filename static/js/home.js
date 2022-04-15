@@ -209,7 +209,7 @@ function TemplateBox(props) {
       }, props.empty ? "Create new template" : props.template.name),
       props.empty ? null : e('span', {
         className: "tournament_date"
-      }, new Date(props.template.startDate * 1000).toLocaleTimeString(undefined, { weekday: 'long', hour: 'numeric', minute: 'numeric' }))),
+      }, moment.tz(`2022-01-0${props.template.startDate.weekday + 3}T${props.template.startDate.wall_time}:00`, props.template.startDate.timezone).format('dddd HH:mm z'))),
     props.expanded ? e(TemplateEditor, {
       teams: props.teams,
       fields: props.empty ? {} : props.template,
@@ -227,7 +227,11 @@ function TemplateEditor(props) {
     clockTime: 30,
     clockIncrement: 30,
     minutes: 60,
-    startDate: (new Date()).getTime() / 1000,
+    startDate: {
+      weekday: 0,
+      wall_time: "12:00",
+      timezone: moment.tz.guess()
+    },
     variant: 'standard',
     rated: true,
     berserkable: true,
@@ -256,7 +260,13 @@ function TemplateEditor(props) {
       .then(res => {
         if (res.success) {
           delete res.success;
-          res.startDate = (new Date(res.startsAt)).getTime() / 1000;
+          const timezone = moment.tz.guess()
+          const startDate = moment.utc(res.startsAt).tz(timezone);
+          res.startDate = {
+            weekday: (startDate.weekday() + 6) % 7, // Convert from Sunday-starting to Monday-starting
+            wall_time: startDate.format('HH:mm'),
+            timezone: timezone
+          }
           res.name = res.fullName.endsWith(" Arena") ? res.fullName.slice(0, -6) : res.fullName;
           res.clockTime = parseInt(res.clock.limit) / 60;
           res.clockIncrement = res.clock.increment;
@@ -345,10 +355,10 @@ function TemplateEditor(props) {
       value: fields.clockIncrement,
       changeField: changeField
     }),
-    e(TournamentNumberField, {
+    e(TournamentSelectField, {
       name: 'minutes',
       label: "Tournament length",
-      min: 0, max: 360, unit: "min",
+      options: [20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 110, 120, 150, 180, 210, 240, 270, 300, 330, 360, 420, 480, 540, 600, 720].map((time) => ({ value: time, text: `${time} min` })),
       value: fields.minutes,
       changeField: changeField
     }),
@@ -515,14 +525,26 @@ function TournamentNumberField(props) {
 }
 
 function TournamentDatetimeField(props) {
-  const getWeekday = (timestamp) => weekdays.indexOf((new Date(timestamp * 1000)).toLocaleDateString(undefined, { weekday: 'long' }))
-  const getTime = (timestamp) => (new Date(timestamp * 1000)).toLocaleTimeString(undefined, { hour12: false, hour: '2-digit', minute: '2-digit' })
-  const [weekday, setWeekday] = React.useState(getWeekday(props.value));
-  const [time, setTime] = React.useState(getTime(props.value));
+  const [weekday, setWeekday] = React.useState(props.value.weekday);
+  const [time, setTime] = React.useState(props.value.wall_time);
+  const [timezone, setTimezone] = React.useState(props.value.timezone || "Etc/UCT");
+  const uniqTZ = (zones) => {
+    const seen = {};
+    return zones.filter((tz) => seen.hasOwnProperty(tz.abbr) ? false : (seen[tz.abbr] = true));
+  }
+  const zones = uniqTZ(moment.tz.names().map((n) => ({
+    name: n,
+    zone: moment.tz(n),
+    abbr: moment.tz(n).zoneName()
+  }))).sort((a,b) => a.abbr > b.abbr);
+
+  // To update values on props change
   React.useEffect(() => {
-    setWeekday(getWeekday(props.value));
-    setTime(getTime(props.value));
+    setWeekday(props.value.weekday);
+    setTime(props.value.wall_time);
+    setTimezone(props.value.timezone);
   }, [props.value])
+
   return e('span', { className: 'tournament_form_field' },
     e('label', { htmlFor: props.name }, props.label),
     e('select', {
@@ -530,7 +552,7 @@ function TournamentDatetimeField(props) {
       onChange: (event) => {
         const newWeekday = parseInt(event.target.value);
         setWeekday(newWeekday);
-        props.changeField(props.name, (new Date(`2022-01-0${newWeekday + 3}T${time}`).getTime() / 1000))
+        props.changeField(props.name, { wall_time: time, weekday: newWeekday, timezone: timezone })
       }
     }, weekdays.map((day, index) =>
       e('option', {
@@ -542,9 +564,20 @@ function TournamentDatetimeField(props) {
       value: time,
       onChange: (event) => {
         setTime(event.target.value);
-        props.changeField(props.name, (new Date(`2022-01-0${weekday + 3}T${event.target.value}`).getTime() / 1000))
+        props.changeField(props.name, { wall_time: event.target.value, weekday: weekday, timezone: timezone })
       }
-    }));
+    }),
+    e('select', {
+      value: timezone,
+      onChange: (event) => {
+        setTimezone(event.target.value);
+        props.changeField(props.name, { wall_time: time, weekday: weekday, timezone: event.target.value })      }
+    }, zones.map((tz) =>
+      e('option', {
+        value: tz.name,
+        key: tz.name
+      }, tz.abbr))),
+    );
 }
 
 function TournamentSelectField(props) {
@@ -568,27 +601,16 @@ function TournamentCreation(props) {
   }, []);
 
   const [creating, setCreating] = React.useState(false);
-  const now = new Date();
-  const monday = (date) => {
-    const d = new Date(date.setDate(date.getDate() - (date.getDay() + 6) % 7))
-    d.setUTCHours(0);
-    d.setUTCMinutes(0);
-    d.setUTCSeconds(0);
-    d.setUTCMilliseconds(0);
-    return d;
-  };
-  const nextWeek = (date) => new Date(date.setDate(date.getDate() + 7));
-  const nextSunday = (date) => new Date(date.setDate(date.getDate() + 6));
 
-  let m = monday(new Date());
-  const [week, setWeek] = React.useState(m.getTime());
+  let m = moment().utc().subtract(1, 'day').startOf('isoWeek');
+  const [week, setWeek] = React.useState(m.valueOf());
   const weeks = [];
   for (let i = 0; i < 6; i++) {
     weeks.push({
-      week: m.getTime(),
-      name: `${m.toLocaleDateString(undefined, { dateStyle: 'medium' })} – ${nextSunday(m).toLocaleDateString(undefined, { dateStyle: 'medium' })}`
+      week: m.valueOf(),
+      name: `${m.format('ll')} – ${moment(m).endOf('isoWeek').format('ll')}`
     });
-    m = nextWeek(m);
+    m.add(1, 'week');
   }
 
   const createTournaments = (selectedOnly) => {
@@ -615,9 +637,10 @@ function TournamentCreation(props) {
   }
 
   const pastTemplates = props.templates.reduce((a, t, index) => {
-    const startDate = (t.startDate - t.startDate % 60) * 1000;
-    const tournamentStart = week + (startDate - monday(new Date(startDate)).getTime());
-    if (tournamentStart < now.getTime())
+    const now = moment().tz('Etc/UCT');
+    const wallTime = moment(t.startDate.wall_time, 'HH:mm');
+    const tournamentStart = moment.tz(week, t.startDate.timezone).add(t.startDate.weekday, 'days').hour(wallTime.hour()).minute(wallTime.minute()).tz('Etc/UCT');
+    if (tournamentStart.isBefore(now))
       a.add(t.id);
     return a;
   }, new Set());

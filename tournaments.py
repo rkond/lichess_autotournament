@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
+from backports.zoneinfo import ZoneInfo  # type: ignore[import]
 from json import loads, dumps
 from math import floor
 from secrets import token_urlsafe
-from typing import Any, Dict, cast
+from typing import Any, Dict, List, Union, cast
 from asyncio import gather
 from lichessapi import LichessError
 
@@ -14,6 +15,27 @@ from tornado.web import HTTPError
 from basehandler import BaseAPIHandler
 
 
+def convert_clock_time(seconds: int) -> str:
+    minutes = seconds/60
+    if minutes == floor(minutes):
+        return f'{int(minutes)}'
+    if minutes*10 == floor(minutes*10):
+        return f'{minutes:.1f}'
+    return f'{minutes:.2f}'
+
+
+# Convert old timestamp format to a new one with timezone info
+def convert_start_date(startDate: Union[int, Dict[str, Union[int, str]]]) -> Dict[str, Union[int, str]]:
+    if isinstance(startDate, dict):
+        return startDate
+    startDateTimestamp = datetime.utcfromtimestamp(startDate)
+    return {
+        'weekday': startDateTimestamp.weekday(),
+        'wall_time': startDateTimestamp.strftime('%H:%M'),
+        'timezone': 'Etc/UCT'
+    }
+
+
 class TournamentTemplateHandler(BaseAPIHandler):
     ALLOWED_FIELDS = {
         'arena':
@@ -23,15 +45,6 @@ class TournamentTemplateHandler(BaseAPIHandler):
          'conditions.minRating.rating', 'conditions.maxRating.rating',
          'conditions.nbRatedGame.nb')
     }
-
-    @staticmethod
-    def convert_clock_time(seconds: int) -> str:
-        minutes = seconds/60
-        if minutes == floor(minutes):
-            return f'{int(minutes)}'
-        if minutes*10 == floor(minutes*10):
-            return f'{minutes:.1f}'
-        return f'{minutes:.2f}'
 
     @classmethod
     def filter_allowed_fields(cls, tournament: Dict[str, Any]) -> Dict[str, Any]:
@@ -51,14 +64,17 @@ class TournamentTemplateHandler(BaseAPIHandler):
                     f"No template with id \"{id}\" for user: \"{self.current_user['id']}\""
                 )
             template = self.filter_allowed_fields(template)
-            template['clockTime'] = self.convert_clock_time(template["clockTime"])
+            template['clockTime'] = convert_clock_time(template['clockTime'])
+            template['startDate'] = convert_start_date(template['startDate'])
             self.write(dumps({'tournament': self.filter_allowed_fields(template), 'success': True}))
         else:
             templates = table.search((T.user == self.current_user['id'])
                                      & (T.tournament_set == 'default'))
             res = [self.filter_allowed_fields(t) for t in templates]
             for t in res:
-                t['clockTime'] = self.convert_clock_time(t["clockTime"])
+                t['clockTime'] = convert_clock_time(t['clockTime'])
+                t['startDate'] = convert_start_date(t['startDate'])
+
             self.write(dumps({'templates': res, 'success': True}))
 
     @tornado.web.authenticated  # type: ignore[misc]
@@ -101,8 +117,8 @@ class TournamentTemplateHandler(BaseAPIHandler):
 
 
 def get_this_monday(d: datetime) -> datetime:
-    monday = d + timedelta(days=-d.weekday())
-    return datetime(monday.year, monday.month, monday.day)
+    monday = d.date() + timedelta(days=-d.weekday())
+    return datetime(monday.year, monday.month, monday.day, tzinfo=d.tzinfo)
 
 
 class TournamentCreateHandler(BaseAPIHandler):
@@ -120,7 +136,7 @@ class TournamentCreateHandler(BaseAPIHandler):
         week = None
         try:
             request = loads(self.request.body.decode())
-            week = datetime.utcfromtimestamp(cast(float, request.get('week')))
+            week = get_this_monday(datetime.utcfromtimestamp(cast(float, request.get('week'))))
         except ValueError:
             raise HTTPError(400, "Invalid JSON")
 
@@ -134,7 +150,7 @@ class TournamentCreateHandler(BaseAPIHandler):
                 (T.tournament_set == 'default') &
                 (T.id.one_of(request.get('templates'))))
         processed_templates = []
-        errors = []
+        errors: Dict[str, List[str]] = {}
         for t in templates:
             template = dict(t)
             if template.get('type') == 'arena':
@@ -146,12 +162,21 @@ class TournamentCreateHandler(BaseAPIHandler):
                     del template['conditions.nbRatedGame.nb']
                 if not template['password']:
                     del template['password']
-
-                start_date = datetime.utcfromtimestamp(template['startDate'] - (template['startDate'] % 60))
-                start_offset = start_date - get_this_monday(start_date)
-                tournamentStart = get_this_monday(week) + start_offset
-                if tournamentStart <= datetime.utcnow():
-                    errors.append(f"Cannot create tournament {template['name']} as it would start in the past")
+                start_date_data = convert_start_date(template['startDate'])
+                wall_time = datetime.strptime(cast(str, start_date_data['wall_time']), "%H:%M")
+                tournament_day = (week + timedelta(days=cast(int, start_date_data['weekday']))).date()
+                tournamentStart = datetime(
+                    year=tournament_day.year,
+                    month=tournament_day.month,
+                    day=tournament_day.day,
+                    hour=wall_time.hour,
+                    minute=wall_time.minute,
+                    tzinfo=ZoneInfo(start_date_data['timezone']))
+                if tournamentStart <= datetime.utcnow().astimezone(tournamentStart.tzinfo):
+                    id = t.get('id', 'Unknown template')
+                    if not errors.get(id):
+                        errors[id] = []
+                    errors[id].append(f"Cannot create tournament {template['name']} as it would start in the past")
                     continue
                 template['startDate'] = int(tournamentStart.timestamp())*1000
             processed_templates.append(template)
@@ -160,7 +185,9 @@ class TournamentCreateHandler(BaseAPIHandler):
             for template in processed_templates]
         result = await gather(*req, return_exceptions=True)
         created = []
-        reply = {}
+        reply: Dict[str, Any] = {}
+        for id, error in errors.items():
+            reply[id] = {'success': False, 'error': ', '.join(error)}
         for t, r in zip(processed_templates, result):
             if isinstance(r, dict):
                 c = dict(r)

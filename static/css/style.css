@@ -92,6 +92,10 @@ button:hover {
   background-color: #22465e;
 }
 
+button:disabled {
+  background-color: #535b61;
+}
+
 .template_list {
   padding: 0;
 }

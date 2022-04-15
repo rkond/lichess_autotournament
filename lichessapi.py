@@ -66,10 +66,11 @@ class LichessAPI():
             return cast(Dict[str, Any], loads(res.body.decode()))
         message = f"Bad Lichess Request: {res.body.decode() if res.body else ''}"
         try:
-            message = str(loads(res.body.decode()).get('error_description'))
+            json = loads(res.body.decode())
+            message = str(json.get('error_description') or json.get('error'))
         except ValueError:
             logging.exception("Error decoding lichess response")
-        logging.error(f"Lichess API error: {res.code}, {message}")
+        logging.error(f"Lichess API error: {res.code}, {res.body.decode()}")
         raise LichessError(res.code, message)
 
     def get_authorize_url(self,  scope: List[str], state: Optional[str] = None) -> Tuple[str, str]:
