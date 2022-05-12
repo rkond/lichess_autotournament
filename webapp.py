@@ -38,6 +38,7 @@ class TournamentAPI(BaseAPIHandler):
     @tornado.web.authenticated  # type: ignore[misc]
     async def get(self) -> None:
         tournament_url = self.get_argument('tournament')
+        need_standings = bool(self.get_argument('results', ''))
         scheme, netloc, path, query, fragment = urlsplit(tournament_url)
         paths = path.split('/')
         if netloc != 'lichess.org' or len(paths) < 2:
@@ -51,10 +52,20 @@ class TournamentAPI(BaseAPIHandler):
             else:
                 raise tornado.web.HTTPError(400, "Invalid tournament type")
         tournament = await self.lichess.get_tournament(self.token, type, id)
-        if type == 'arena':
-            players = await gather(*[self.lichess.get_user(self.token, player['name']) for player in tournament['standing']['players']])  # noqa: E501
-            for p, player in zip(tournament['standing']['players'], players):
-                p['profile'] = player.get('profile', {})
+        if need_standings:
+            if type == 'arena':
+                players = await gather(*[self.lichess.get_user(self.token, player['name']) for player in tournament['standing']['players']])  # noqa: E501
+                for p, player in zip(tournament['standing']['players'], players):
+                    p['profile'] = player.get('profile', {})
+            elif type == 'swiss':
+                standings = await self.lichess.get_swiss_standings(self.token, id, 10)
+                players = await gather(*[self.lichess.get_user(self.token, player['username']) for player in standings])  # noqa: E501
+                for p, player in zip(standings, players):
+                    p['profile'] = player.get('profile', {})
+                    p['name'] = p['username']
+                    del p['username']
+                tournament['standing'] = {'players': standings}
+                tournament['fullName'] = tournament['name']
         tournament['success'] = True
         tournament['type'] = type
         self.write(json.dumps(tournament))

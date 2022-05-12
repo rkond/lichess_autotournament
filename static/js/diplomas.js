@@ -504,7 +504,7 @@ function TournamentLine(props) {
     if (loading.request)
       return
     setLoading({ request: true, loading: true });
-    fetch(`/api/v1/tournament?${new URLSearchParams({ tournament: props.url })}`, {
+    fetch(`/api/v1/tournament?${new URLSearchParams({ tournament: props.url })}&results=1`, {
       credentials: 'include',
     })
       .then(res => res.json())

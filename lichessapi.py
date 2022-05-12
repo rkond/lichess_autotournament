@@ -154,6 +154,14 @@ class LichessAPI():
         else:
             raise ValueError(f"Unknown tournament type {type}")
 
+    async def get_swiss_standings(self, token: str, id: str, max: int = 10) -> List[Dict[str, Any]]:
+        assert '/' not in id
+        return cast(List[Dict[str, Any]], await self._make_request(
+                f'{self.SWISS_URL}/{id}/results',
+                method='GET',
+                token=token,
+                nb=max))
+
     async def create_tournament(self, token: str, type: str, template_dict: Dict[str, Any]) -> Dict[str, Any]:
         if type == 'arena':
             for k, v in template_dict.items():
