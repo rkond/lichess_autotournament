@@ -184,6 +184,11 @@ class TournamentCreateHandler(BaseAPIHandler):
             id = template.get('id', 'Unknown template')
             try:
                 tournamentStart = self.get_tournament_start(template, week)
+                if tournamentStart <= datetime.utcnow().astimezone(tournamentStart.tzinfo):
+                    if not errors.get(id):
+                        errors[id] = []
+                    errors[id].append(f"Cannot create tournament {template['name']} as it would start in the past")
+                    continue
                 if int(template['conditions.minRating.rating']) <= 0:
                     del template['conditions.minRating.rating']
                 if int(template['conditions.maxRating.rating']) <= 0:
@@ -193,12 +198,18 @@ class TournamentCreateHandler(BaseAPIHandler):
                 if not template['password']:
                     del template['password']
                 if template.get('type') == 'arena':
-                    if tournamentStart <= datetime.utcnow().astimezone(tournamentStart.tzinfo):
-                        if not errors.get(id):
-                            errors[id] = []
-                        errors[id].append(f"Cannot create tournament {template['name']} as it would start in the past")
-                        continue
                     template['startDate'] = int(tournamentStart.timestamp())*1000
+                table = self.db.table('tournaments')
+                template['startTimestamp'] = int(tournamentStart.timestamp())
+                if table.contains(
+                        (T.user == self.current_user['id']) &
+                        (T.tournament_set == 'default') &
+                        (T.template == id) &
+                        (T.startTimestamp == int(tournamentStart.timestamp()))):
+                    if not errors.get(id):
+                        errors[id] = []
+                    errors[id].append(f"Tournament {template['name']} was created earlier")
+                    continue
                 elif template.get('type') == 'swiss':
                     if tournamentStart <= datetime.utcnow().astimezone(tournamentStart.tzinfo):
                         if not errors.get(id):
@@ -233,7 +244,8 @@ class TournamentCreateHandler(BaseAPIHandler):
                     'tournament_set': 'default',
                     'template': t.get('id'),
                     'password': t.get('password'),
-                    'created': datetime.utcnow().timestamp()
+                    'created': datetime.utcnow().timestamp(),
+                    'startTimestamp': t.get('startTimestamp')
                 })
                 created.append(c)
                 reply[t.get('id', '')] = dict(r)

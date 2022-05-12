@@ -187,7 +187,7 @@ settings = {
     'lichess': LichessAPI(options.lichess_client_id, f'{options.base_url}/login')
 }
 
-urls = [
+urls: tornado.web._RuleList = [
     (r"/static/(.*)", tornado.web.StaticFileHandler, {"path": options.static_path}),
     (r"/", HomeHandler),
     (r"/diplomas/(add)", DiplomasHandler),
