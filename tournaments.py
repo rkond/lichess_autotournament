@@ -197,8 +197,6 @@ class TournamentCreateHandler(BaseAPIHandler):
                     del template['conditions.nbRatedGame.nb']
                 if not template['password']:
                     del template['password']
-                if template.get('type') == 'arena':
-                    template['startDate'] = int(tournamentStart.timestamp())*1000
                 table = self.db.table('tournaments')
                 template['startTimestamp'] = int(tournamentStart.timestamp())
                 if table.contains(
@@ -210,6 +208,8 @@ class TournamentCreateHandler(BaseAPIHandler):
                         errors[id] = []
                     errors[id].append(f"Tournament {template['name']} was created earlier")
                     continue
+                if template.get('type') == 'arena':
+                    template['startDate'] = int(tournamentStart.timestamp())*1000
                 elif template.get('type') == 'swiss':
                     if tournamentStart <= datetime.utcnow().astimezone(tournamentStart.tzinfo):
                         if not errors.get(id):
