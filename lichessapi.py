@@ -28,6 +28,7 @@ class LichessAPI():
     _USER_TEAMS_URL = 'https://lichess.org/api/team/of'
 
     ARENA_URL = 'https://lichess.org/api/tournament'
+    SWISS_URL = 'https://lichess.org/api/swiss'
     TEAM_URL = 'https://lichess.org/api/team'
 
     def __init__(self, client_id: str, redirect_uri: str):
@@ -37,6 +38,13 @@ class LichessAPI():
 
     def __del__(self) -> None:
         self.http.close()
+
+    @staticmethod
+    def transform_boolean_parameters(params_dict: Dict[str, Any]) -> Dict[str, Any]:
+        for k, v in params_dict.items():
+            if isinstance(v, bool):
+                params_dict[k] = "true" if v else "false"
+        return params_dict
 
     async def _make_request(
             self,
@@ -48,9 +56,9 @@ class LichessAPI():
         body = None
         if kwargs:
             if method == 'GET':
-                url = f'{url}?{urlencode(kwargs)}'
+                url = f'{url}?{urlencode(self.transform_boolean_parameters(kwargs))}'
             else:
-                body = urlencode(kwargs).encode()
+                body = urlencode(self.transform_boolean_parameters(kwargs)).encode()
                 headers.update({'Content-Type': 'application/x-www-form-urlencoded'})
         if token:
             headers.update({'Authorization': f' Bearer {token}'})
@@ -125,27 +133,24 @@ class LichessAPI():
         return cast(Dict[str, Any], user)
 
     async def get_user_teams(self, token: str, username: str) -> List[Dict[str, Any]]:
+        assert '/' not in username
         return cast(List[Dict[str, Any]], await self._make_request(
             f'{self._USER_TEAMS_URL}/{username}',
             method='GET',
             token=token))
 
-    async def get_tournament(self, token: str, type: str, id: str, team_id: str = '') -> Dict[str, Any]:
+    async def get_tournament(self, token: str, type: str, id: str) -> Dict[str, Any]:
+        assert '/' not in id
         if type == 'arena':
             return cast(Dict[str, Any], await self._make_request(
                 f'{self.ARENA_URL}/{id}',
                 method='GET',
                 token=token))
         elif type == 'swiss':
-            tournaments: List[Dict[str, Any]] = cast(List[Dict[str, Any]], await self._make_request(
-                f'{self.TEAM_URL}/{team_id}/swiss',
+            return cast(Dict[str, Any], await self._make_request(
+                f'{self.SWISS_URL}/{id}',
                 method='GET',
-                token=token,
-                max=100000))
-            for t in tournaments:
-                if t['id'] == id:
-                    return t
-            raise RuntimeError("Tournament not found")
+                token=token))
         else:
             raise ValueError(f"Unknown tournament type {type}")
 
@@ -156,11 +161,19 @@ class LichessAPI():
                     template_dict[k] = str(v).lower()
             template_dict['clockTime'] = f'{int(template_dict["clockTime"])/60:.1f}'
             return cast(Dict[str, Any], await self._make_request(
-                f'{self.ARENA_URL}',
+                self.ARENA_URL,
                 method='POST',
                 token=token,
                 **template_dict))
         elif type == 'swiss':
-            raise NotImplementedError("No swiss tournaments yet")
+            team_id = template_dict.get('teamId')
+            if not team_id:
+                raise ValueError('"teamId" is required for swiss tournaments')
+            assert '/' not in team_id
+            return cast(Dict[str, Any], await self._make_request(
+                f'{self.SWISS_URL}/new/{team_id}',
+                method='POST',
+                token=token,
+                **template_dict))
         else:
             raise ValueError(f"Unknown tournament type {type}")

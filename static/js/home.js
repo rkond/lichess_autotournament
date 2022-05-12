@@ -149,7 +149,7 @@ function TournamentTemplates(props) {
     e('div', { id: 'application_root' },
       e('div', { className: 'current_templates' },
         e('h1', {}, "Tournament templates"),
-        templates.length ? e('ol', { className: 'template_list' },
+        e('ol', { className: 'template_list' },
           templates.map((template, index) => e(TemplateBox, {
             key: template['id'],
             index: index,
@@ -171,7 +171,7 @@ function TournamentTemplates(props) {
             onClick: () => setExpanded("new"),
             onCancel: () => setExpanded(null)
           }),
-        ) : e('p', {}, "No tournament templates"),
+        ),
         e(TournamentCreation, {
           templates: templates,
           onCreated: onCreated
@@ -221,37 +221,6 @@ function TemplateBox(props) {
 }
 
 function TemplateEditor(props) {
-  const [fields, setFields] = React.useState(Object.assign({
-    type: 'arena',
-    name: 'Untitled',
-    clockTime: 30,
-    clockIncrement: 30,
-    minutes: 60,
-    startDate: {
-      weekday: 0,
-      wall_time: "12:00",
-      timezone: moment.tz.guess()
-    },
-    variant: 'standard',
-    rated: true,
-    berserkable: true,
-    streakable: true,
-    hasChat: true,
-    description: '',
-    password: '',
-    'conditions.teamMember.teamId': '',
-    'conditions.minRating.rating': 0,
-    'conditions.maxRating.rating': 0,
-    'conditions.nbRatedGame.nb': 0
-  }, props.fields));
-
-  const changeField = (key, value) => {
-    setFields(Object.assign({
-    }, fields, Object.fromEntries([[key, value]])))
-  }
-
-  const [prototypeURL, setPrototypeURL] = React.useState('');
-
   const copyFromLichess = () => {
     fetch(`/api/v1/tournament?${new URLSearchParams({ tournament: prototypeURL })}`, {
       credentials: 'include',
@@ -260,47 +229,59 @@ function TemplateEditor(props) {
       .then(res => {
         if (res.success) {
           delete res.success;
-          const timezone = moment.tz.guess()
-          const startDate = moment.utc(res.startsAt).tz(timezone);
-          res.startDate = {
-            weekday: (startDate.weekday() + 6) % 7, // Convert from Sunday-starting to Monday-starting
-            wall_time: startDate.format('HH:mm'),
-            timezone: timezone
-          }
-          res.name = res.fullName.endsWith(" Arena") ? res.fullName.slice(0, -6) : res.fullName;
-          res.clockTime = parseInt(res.clock.limit) / 60;
-          res.clockIncrement = res.clock.increment;
-          res.streakable = !res.noStreak;
-          res.verdicts.list.forEach(v => {
-            if (v.condition.startsWith("Must be in team"))
-              res['conditions.teamMember.teamId'] = props.teams.reduce((a, c) => (a == '' && v.condition.endsWith(c.name)) ? c.id : '', '')
-            const nbRated = v.condition.match(/≥ (\d+) rated games/)
-            if (nbRated && nbRated[1])
-              res['conditions.nbRatedGame.nb'] = parseInt(nbRated[1]);
-            const minRating = v.condition.match(/Rated ≥ (\d+) in/)
-            if (minRating && minRating[1])
-              res['conditions.minRating.rating'] = parseInt(minRating[1]);
-            const maxRating = v.condition.match(/Rated ≤ (\d+) in/)
-            if (maxRating && maxRating[1])
-              res['conditions.maxRating.rating'] = parseInt(maxRating[1]);
-          });
-          for (let v in res.verdicts.list) {
-            if (res.verdicts.list[v].condition.startsWith("Must be in team")) {
-              for (let t in props.teams) {
-                if (res.verdicts.list[v].condition.endsWith(props.teams[t].name)) {
-                  res['conditions.teamMember.teamId'] = props.teams[t].id;
-                  break;
+          if (res.type == 'arena') {
+            const timezone = moment.tz.guess()
+            const startDate = moment.utc(res.startsAt).tz(timezone);
+            res.startDate = {
+              weekday: (startDate.weekday() + 6) % 7, // Convert from Sunday-starting to Monday-starting
+              wall_time: startDate.format('HH:mm'),
+              timezone: timezone
+            }
+            res.name = res.fullName.endsWith(" Arena") ? res.fullName.slice(0, -6) : res.fullName;
+            res.clockTime = parseInt(res.clock.limit) / 60;
+            res.clockIncrement = res.clock.increment;
+            res.streakable = !res.noStreak;
+            res.verdicts.list.forEach(v => {
+              if (v.condition.startsWith("Must be in team"))
+                res['conditions.teamMember.teamId'] = props.teams.reduce((a, c) => (a == '' && v.condition.endsWith(c.name)) ? c.id : '', '')
+              const nbRated = v.condition.match(/≥ (\d+) rated games/)
+              if (nbRated && nbRated[1])
+                res['conditions.nbRatedGame.nb'] = parseInt(nbRated[1]);
+              const minRating = v.condition.match(/Rated ≥ (\d+) in/)
+              if (minRating && minRating[1])
+                res['conditions.minRating.rating'] = parseInt(minRating[1]);
+              const maxRating = v.condition.match(/Rated ≤ (\d+) in/)
+              if (maxRating && maxRating[1])
+                res['conditions.maxRating.rating'] = parseInt(maxRating[1]);
+            });
+            for (let v in res.verdicts.list) {
+              if (res.verdicts.list[v].condition.startsWith("Must be in team")) {
+                for (let t in props.teams) {
+                  if (res.verdicts.list[v].condition.endsWith(props.teams[t].name)) {
+                    res['conditions.teamMember.teamId'] = props.teams[t].id;
+                    break;
+                  }
+                }
+              }
+              if (res.verdicts.list[v].condition.startsWith("Must be in team")) {
+                for (let t in props.teams) {
+                  if (res.verdicts.list[v].condition.endsWith(props.teams[t].name)) {
+                    res['conditions.teamMember.teamId'] = props.teams[t].id;
+                    break;
+                  }
                 }
               }
             }
-            if (res.verdicts.list[v].condition.startsWith("Must be in team")) {
-              for (let t in props.teams) {
-                if (res.verdicts.list[v].condition.endsWith(props.teams[t].name)) {
-                  res['conditions.teamMember.teamId'] = props.teams[t].id;
-                  break;
-                }
-              }
+          } else if (res.type == 'swiss') {
+            const timezone = moment.tz.guess()
+            const startDate = moment(res.startsAt).tz(timezone);
+            res.startDate = {
+              weekday: (startDate.weekday() + 6) % 7, // Convert from Sunday-starting to Monday-starting
+              wall_time: startDate.format('HH:mm'),
+              timezone: timezone
             }
+            res['clock.limit'] = parseInt(res.clock.limit);
+            res['clock.increment'] = parseInt(res.clock.increment);
           }
           const newFields = Object.assign({}, fields);
           for (const f in fields) {
@@ -312,6 +293,63 @@ function TemplateEditor(props) {
           alert("Invalid tournament URL")
         }
       });
+  }
+
+  const [prototypeURL, setPrototypeURL] = React.useState('');
+  const [fields, setFields] = React.useState(Object.assign({
+    type: 'arena',
+    // Common fields
+    startDate: {
+      weekday: 0,
+      wall_time: "12:00",
+      timezone: moment.tz.guess()
+    },
+    variant: 'standard',
+    rated: true,
+    name: 'Untitled',
+    description: '',
+    password: '',
+    'conditions.minRating.rating': 0,
+    'conditions.maxRating.rating': 0,
+    'conditions.nbRatedGame.nb': 0,
+    // Arena specific
+    clockTime: 30,
+    clockIncrement: 30,
+    minutes: 60,
+    berserkable: true,
+    streakable: true,
+    hasChat: true,
+    'conditions.teamMember.teamId': '',
+    // Swiss specific
+    'clock.limit': 600,
+    'clock.increment': 0,
+    nbRounds: 8,
+    roundInterval: 10,
+    forbiddenPairings: '',
+    teamId: props.teams && props.teams.length ? props.teams[0].id : '',
+    chatFor: 20
+  }, props.fields));
+
+  const changeField = (key, value) => {
+    setFields(Object.assign({
+    }, fields, Object.fromEntries([[key, value]])))
+  }
+
+  let typeSpecificEditor = null;
+  if (fields.type === 'arena') {
+    typeSpecificEditor =  e(ArenaTemplateEditor, Object.assign({}, props, {
+      changeField: changeField,
+      copyFromLichess: copyFromLichess,
+      fields: fields,
+    }));
+  } else if (fields.type === 'swiss') {
+    typeSpecificEditor =  e(SwissTemplateEditor, Object.assign({}, props, {
+      changeField: changeField,
+      copyFromLichess: copyFromLichess,
+      fields: fields
+    }));
+  } else {
+    typeSpecificEditor = e('p', {} `Unsupported template type "${tournamentType}"`);
   }
 
   return e('div', {
@@ -329,7 +367,8 @@ function TemplateEditor(props) {
       name: 'type',
       label: "Tournament type",
       options: [
-        { value: 'arena', text: "Arena" }
+        { value: 'arena', text: "Arena" },
+        { value: 'swiss', text: "Swiss" }
       ],
       value: fields.type,
       changeField: changeField
@@ -339,27 +378,6 @@ function TemplateEditor(props) {
       label: "Tournament name",
       maxLength: 30,
       value: fields.name,
-      changeField: changeField
-    }),
-    e(TournamentSelectField, {
-      name: 'clockTime',
-      label: "Clock time",
-      options: [0, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 6, 7, 10, 15, 20, 25, 30, 40, 50, 60].map((time) => ({ value: time, text: `${time} min` })),
-      value: fields.clockTime,
-      changeField: changeField
-    }),
-    e(TournamentNumberField, {
-      name: 'clockIncrement',
-      label: "Clock increment",
-      min: 0, max: 60, unit: "sec",
-      value: fields.clockIncrement,
-      changeField: changeField
-    }),
-    e(TournamentSelectField, {
-      name: 'minutes',
-      label: "Tournament length",
-      options: [20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 110, 120, 150, 180, 210, 240, 270, 300, 330, 360, 420, 480, 540, 600, 720].map((time) => ({ value: time, text: `${time} min` })),
-      value: fields.minutes,
       changeField: changeField
     }),
     e(TournamentDatetimeField, {
@@ -391,24 +409,7 @@ function TemplateEditor(props) {
       value: fields.rated,
       changeField: changeField
     }),
-    e(TournamentCheckboxField, {
-      name: 'berserkable',
-      label: "Berserkable",
-      value: fields.berserkable,
-      changeField: changeField
-    }),
-    e(TournamentCheckboxField, {
-      name: 'streakable',
-      label: "Streakable",
-      value: fields.streakable,
-      changeField: changeField
-    }),
-    e(TournamentCheckboxField, {
-      name: 'hasChat',
-      label: "Has chat",
-      value: fields.hasChat,
-      changeField: changeField
-    }),
+    typeSpecificEditor,
     e(TournamentTextareaField, {
       name: 'description',
       label: "Description",
@@ -419,20 +420,6 @@ function TemplateEditor(props) {
       name: 'password',
       label: "Password",
       value: fields.password,
-      changeField: changeField
-    }),
-    e(TournamentSelectField, {
-      name: 'conditions.teamMember.teamId',
-      label: "Restrict to team members of",
-      options:
-        props.teams == null || props.teams == 'loading' ?
-          [{ value: '', text: `Loading…` }] : (props.teams == 'error' ?
-            [{ value: '', text: `Error loading teams` }] :
-            [{ value: '', text: `No restriction` }].concat(props.teams.map(team => ({
-              value: team.id, text: team.name
-            })))
-          ),
-      value: fields['conditions.teamMember.teamId'],
       changeField: changeField
     }),
     e(TournamentNumberField, {
@@ -461,8 +448,145 @@ function TemplateEditor(props) {
     }, "Save"),
     e('button', {
       onClick: props.onCancel
-    }, "Cancel")
-  )
+    }, "Cancel"));
+}
+
+function ArenaTemplateEditor(props) {
+  return [
+    e(TournamentSelectField, {
+      name: 'clockTime', key: 'clockTime',
+      label: "Clock time",
+      options: [0, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 6, 7, 10, 15, 20, 25, 30, 40, 50, 60].map((time) => ({ value: time, text: `${time} min` })),
+      value: props.fields.clockTime,
+      changeField: props.changeField
+    }),
+    e(TournamentNumberField, {
+      name: 'clockIncrement', key: 'clockIncrement',
+      label: "Clock increment",
+      min: 0, max: 60, unit: "sec",
+      value: props.fields.clockIncrement,
+      changeField: props.changeField
+    }),
+    e(TournamentSelectField, {
+      name: 'minutes', key: 'minutes',
+      label: "Tournament length",
+      options: [20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 110, 120, 150, 180, 210, 240, 270, 300, 330, 360, 420, 480, 540, 600, 720].map((time) => ({ value: time, text: `${time} min` })),
+      value: props.fields.minutes,
+      changeField: props.changeField
+    }),
+    e(TournamentCheckboxField, {
+      name: 'berserkable', key: 'berserkable',
+      label: "Berserkable",
+      value: props.fields.berserkable,
+      changeField: props.changeField
+    }),
+    e(TournamentCheckboxField, {
+      name: 'streakable', key: 'streakable',
+      label: "Streakable",
+      value: props.fields.streakable,
+      changeField: props.changeField
+    }),
+    e(TournamentCheckboxField, {
+      name: 'hasChat', key: 'hasChat',
+      label: "Has chat",
+      value: props.fields.hasChat,
+      changeField: props.changeField
+    }),
+    e(TournamentSelectField, {
+      name: 'conditions.teamMember.teamId', key: 'conditions.teamMember.teamId',
+      label: "Restrict to team members of",
+      options:
+        props.teams == null || props.teams == 'loading' ?
+          [{ value: '', text: `Loading…` }] : (props.teams == 'error' ?
+            [{ value: '', text: `Error loading teams` }] :
+            [{ value: '', text: `No restriction` }].concat(props.teams.map(team => ({
+              value: team.id, text: team.name
+            })))
+          ),
+      value: props.fields['conditions.teamMember.teamId'],
+      changeField: props.changeField
+    }),
+]
+}
+
+function SwissTemplateEditor(props) {
+  return [
+    e(TournamentSelectField, {
+      name: 'teamId', key: 'teamId',
+      label: "Team",
+      options:
+        props.teams == null || props.teams == 'loading' ?
+          [{ value: '', text: `Loading…` }] : (props.teams == 'error' ?
+            [{ value: '', text: `Error loading teams` }] : ( props.teams.length ?
+            props.teams.map(team => ({
+              value: team.id, text: team.name
+            })) : {value: '', text: 'You have to be a team leader to create swiss tournaments'})
+          ),
+      value: props.fields.teamId,
+      changeField: props.changeField
+    }),
+    e(TournamentSelectField, {
+      name: 'clock.limit', key: 'clock.limit',
+      label: "Clock time",
+      options: [15, 30, 45, 60, 90, 120, 180, 240, 300, 360, 420, 600, 900, 1200, 1500, 1800, 2400, 3000, 3600].map((time) => ({ value: time, text: `${time} sec` })),
+      value: props.fields['clock.limit'],
+      changeField: props.changeField
+    }),
+    e(TournamentNumberField, {
+      name: 'clock.increment', key: 'clock.increment',
+      label: "Clock increment",
+      min: 0, max: 600, unit: "sec",
+      value: props.fields['clock.increment'],
+      changeField: props.changeField
+    }),
+    e(TournamentNumberField, {
+      name: 'nbRounds', key: 'nbRounds',
+      label: "Rounds",
+      min: 3, max: 100, unit: "",
+      value: props.fields.nbRounds,
+      changeField: props.changeField
+    }),
+    e(TournamentSelectField, {
+      name: 'roundInterval', key: 'roundInterval',
+      label: "Interval between rounds",
+      options: [
+        {value: -1, text: 'Default'},
+        {value: 5, text: '5 sec'},
+        {value: 10, text: '10 sec'},
+        {value: 20, text: '20 sec'},
+        {value: 30, text: '30 sec'},
+        {value: 45, text: '45 sec'},
+        {value: 60, text: '1 min'},
+        {value: 120, text: '2 min'},
+        {value: 180, text: '3 min'},
+        {value: 300, text: '5 min'},
+        {value: 600, text: '10 min'},
+        {value: 900, text: '15 min'},
+        {value: 1200, text: '20 min'},
+        {value: 1800, text: '30 min'},
+        {value: 2700, text: '45 min'},
+        {value: 3600, text: '1 hour'},
+        {value: 86400, text: '1 day'},
+        {value: 172800, text: '2 days'},
+        {value: 604800, text: '1 week'},
+        {value: 99999999, text: 'Manually schedule rounds'},
+      ],
+      value: props.fields.roundInterval,
+      changeField: props.changeField
+    }),
+    e(TournamentSelectField, {
+      name: 'chatFor', key: 'chatFor',
+      label: "Chat for",
+      value: props.fields.chatFor,
+      options: [
+        { value: 0, text: "Nobody"},
+        { value: 10, text: "Only team leaders"},
+        { value: 20, text: "Only team members"},
+        { value: 30, text: "All Lichess players"},
+      ],
+      changeField: props.changeField
+    })
+  ]
 }
 
 function TournamentURLField(props) {
@@ -520,6 +644,7 @@ function TournamentNumberField(props) {
       value: props.value,
       min: props.min,
       max: props.max,
+      disabled: props.disabled,
       onChange: (event) => props.changeField(props.name, event.target.value)
     }), props.unit);
 }

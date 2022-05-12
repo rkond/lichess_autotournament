@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import logging
 from backports.zoneinfo import ZoneInfo  # type: ignore[import]
 from json import loads, dumps
 from math import floor
@@ -43,21 +44,31 @@ class TournamentTemplateHandler(BaseAPIHandler):
          'variant', 'rated', 'berserkable', 'streakable', 'hasChat',
          'description', 'password', 'conditions.teamMember.teamId',
          'conditions.minRating.rating', 'conditions.maxRating.rating',
-         'conditions.nbRatedGame.nb')
+         'conditions.nbRatedGame.nb'),
+        'swiss': (
+         'id', 'type', 'name', 'clock.limit', 'clock.increment', 'startDate',
+         'variant', 'rated', 'chatFor', 'teamId', 'nbRounds', 'roundInterval',
+         'forbiddenPairings',
+         'description', 'password',
+         'conditions.minRating.rating', 'conditions.maxRating.rating',
+         'conditions.nbRatedGame.nb'
+        )
     }
 
     @classmethod
     def filter_allowed_fields(cls, tournament: Dict[str, Any]) -> Dict[str, Any]:
-        return {k: v for k, v in tournament.items() if k in cls.ALLOWED_FIELDS[tournament['type']]} if tournament['type'] in cls.ALLOWED_FIELDS else {}  # noqa: E501
+        return {k: v for k, v in tournament.items() if k in cls.ALLOWED_FIELDS[tournament['type']]} if tournament.get('type', '') in cls.ALLOWED_FIELDS else {}  # noqa: E501
 
     @tornado.web.authenticated  # type: ignore[misc]
     def get(self, id: str) -> None:
         table = self.db.table('templates')
         T = Query()
         if id:
-            template = table.get((T.user == self.current_user['id'])
-                                 & (T.tournament_set == 'default')
-                                 & (T.id == id))
+            template = cast(
+                Dict[str, Any],
+                table.get((T.user == self.current_user['id'])
+                          & (T.tournament_set == 'default')
+                          & (T.id == id)))
             if not template:
                 raise HTTPError(
                     404,
@@ -72,8 +83,10 @@ class TournamentTemplateHandler(BaseAPIHandler):
                                      & (T.tournament_set == 'default'))
             res = [self.filter_allowed_fields(t) for t in templates]
             for t in res:
-                t['clockTime'] = convert_clock_time(t['clockTime'])
-                t['startDate'] = convert_start_date(t['startDate'])
+                if 'clockTime' in t:
+                    t['clockTime'] = convert_clock_time(t['clockTime'])
+                if 'startDate' in t:
+                    t['startDate'] = convert_start_date(t['startDate'])
 
             self.write(dumps({'templates': res, 'success': True}))
 
@@ -87,7 +100,8 @@ class TournamentTemplateHandler(BaseAPIHandler):
         value['id'] = token_urlsafe()
         value['user'] = self.current_user['id']
         value['tournament_set'] = 'default'
-        value['clockTime'] = int(float(value['clockTime'])*60)
+        if 'clockTime' in value:
+            value['clockTime'] = int(float(value['clockTime'])*60)
         table = self.db.table('templates')
         table.insert(value)
         self.write(dumps({'success': True, 'id': value['id']}))
@@ -102,7 +116,8 @@ class TournamentTemplateHandler(BaseAPIHandler):
         value['id'] = id
         value['user'] = self.current_user['id']
         value['tournament_set'] = 'default'
-        value['clockTime'] = int(float(value['clockTime'])*60)
+        if 'clockTime' in value:
+            value['clockTime'] = int(float(value['clockTime'])*60)
         table = self.db.table('templates')
         T = Query()
         u = table.update(value, (T.user == self.current_user['id']) & (T.id == id) & (T.tournament_set == 'default'))
@@ -130,6 +145,19 @@ class TournamentCreateHandler(BaseAPIHandler):
         tournaments.sort(key=lambda t: t.get('created', 0), reverse=True)
         self.write(dumps({'success': True, 'tournaments': tournaments}))
 
+    @staticmethod
+    def get_tournament_start(template: Dict[str, Any], week: datetime) -> datetime:
+        start_date_data = convert_start_date(template['startDate'])
+        wall_time = datetime.strptime(cast(str, start_date_data['wall_time']), "%H:%M")
+        tournament_day = (week + timedelta(days=cast(int, start_date_data['weekday']))).date()
+        return datetime(
+            year=tournament_day.year,
+            month=tournament_day.month,
+            day=tournament_day.day,
+            hour=wall_time.hour,
+            minute=wall_time.minute,
+            tzinfo=ZoneInfo(cast(str, start_date_data['timezone'])))
+
     @tornado.web.authenticated  # type: ignore[misc]
     async def post(self) -> None:
         request = {}
@@ -151,34 +179,43 @@ class TournamentCreateHandler(BaseAPIHandler):
                 (T.id.one_of(request.get('templates'))))
         processed_templates = []
         errors: Dict[str, List[str]] = {}
-        for t in templates:
-            template = dict(t)
-            if template.get('type') == 'arena':
-                if template['conditions.minRating.rating'] <= 0:
+        for _t in templates:
+            template = dict(_t)
+            id = template.get('id', 'Unknown template')
+            try:
+                tournamentStart = self.get_tournament_start(template, week)
+                if int(template['conditions.minRating.rating']) <= 0:
                     del template['conditions.minRating.rating']
-                if template['conditions.maxRating.rating'] <= 0:
+                if int(template['conditions.maxRating.rating']) <= 0:
                     del template['conditions.maxRating.rating']
-                if template['conditions.nbRatedGame.nb'] <= 0:
+                if int(template['conditions.nbRatedGame.nb']) <= 0:
                     del template['conditions.nbRatedGame.nb']
                 if not template['password']:
                     del template['password']
-                start_date_data = convert_start_date(template['startDate'])
-                wall_time = datetime.strptime(cast(str, start_date_data['wall_time']), "%H:%M")
-                tournament_day = (week + timedelta(days=cast(int, start_date_data['weekday']))).date()
-                tournamentStart = datetime(
-                    year=tournament_day.year,
-                    month=tournament_day.month,
-                    day=tournament_day.day,
-                    hour=wall_time.hour,
-                    minute=wall_time.minute,
-                    tzinfo=ZoneInfo(start_date_data['timezone']))
-                if tournamentStart <= datetime.utcnow().astimezone(tournamentStart.tzinfo):
-                    id = t.get('id', 'Unknown template')
+                if template.get('type') == 'arena':
+                    if tournamentStart <= datetime.utcnow().astimezone(tournamentStart.tzinfo):
+                        if not errors.get(id):
+                            errors[id] = []
+                        errors[id].append(f"Cannot create tournament {template['name']} as it would start in the past")
+                        continue
+                    template['startDate'] = int(tournamentStart.timestamp())*1000
+                elif template.get('type') == 'swiss':
+                    if tournamentStart <= datetime.utcnow().astimezone(tournamentStart.tzinfo):
+                        if not errors.get(id):
+                            errors[id] = []
+                        errors[id].append(f"Cannot create tournament {template['name']} as it would start in the past")
+                        continue
+                    template['startsAt'] = int(tournamentStart.timestamp())*1000
+                else:
                     if not errors.get(id):
                         errors[id] = []
-                    errors[id].append(f"Cannot create tournament {template['name']} as it would start in the past")
+                    errors[id].append(f"Unsupported template type {template['type']} for {template['name']}")
                     continue
-                template['startDate'] = int(tournamentStart.timestamp())*1000
+            except KeyError:
+                logging.exception("Incomplete template")
+                if not errors.get(id):
+                    errors[id] = []
+                errors[id].append(f"Cannot create tournament {template['name']}. Incomplete template.")
             processed_templates.append(template)
         req = [
             self.lichess.create_tournament(self.token, template['type'], template)
@@ -199,13 +236,13 @@ class TournamentCreateHandler(BaseAPIHandler):
                     'created': datetime.utcnow().timestamp()
                 })
                 created.append(c)
-                reply[t.get('id')] = dict(r)
-                reply[t.get('id')]['success'] = True
-                reply[t.get('id')]['password'] = t.get('password')
+                reply[t.get('id', '')] = dict(r)
+                reply[t.get('id', '')]['success'] = True
+                reply[t.get('id', '')]['password'] = t.get('password')
             elif isinstance(r, LichessError):
-                reply[t.get('id')] = {'success': False, 'error': r.message}
+                reply[t.get('id', '')] = {'success': False, 'error': r.message}
             else:
-                reply[t.get('id')] = {'success': False, 'error': "Internal error"}
+                reply[t.get('id', '')] = {'success': False, 'error': "Internal error"}
 
         table = self.db.table('tournaments')
         table.insert_multiple(created)

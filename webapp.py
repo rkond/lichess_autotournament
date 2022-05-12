@@ -50,11 +50,13 @@ class TournamentAPI(BaseAPIHandler):
                 type = 'swiss'
             else:
                 raise tornado.web.HTTPError(400, "Invalid tournament type")
-        tournament = await self.lichess.get_tournament(self.token, type, id, self.options.team_id)
-        players = await gather(*[self.lichess.get_user(self.token, player['name']) for player in tournament['standing']['players']])  # noqa: E501
-        for p, player in zip(tournament['standing']['players'], players):
-            p['profile'] = player.get('profile', {})
+        tournament = await self.lichess.get_tournament(self.token, type, id)
+        if type == 'arena':
+            players = await gather(*[self.lichess.get_user(self.token, player['name']) for player in tournament['standing']['players']])  # noqa: E501
+            for p, player in zip(tournament['standing']['players'], players):
+                p['profile'] = player.get('profile', {})
         tournament['success'] = True
+        tournament['type'] = type
         self.write(json.dumps(tournament))
 
 
@@ -150,7 +152,6 @@ def define_options() -> None:
     define("base_url", type=str)
 
     define("lichess_client_id", type=str, default='eaade028-da6e-11eb-b2d8-ab4b0acb0c63')
-    define("team_id", type=str)
     define("db_dir", type=str, default='/var/lib/lichess-tournaments')
 
     define('cookie_secret', type=str)
