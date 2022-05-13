@@ -4,11 +4,11 @@
  ## Features
  - Copy parameters from existing tournament for new template
  - Create tournaments up to 6 weeks in advance
- - Automated generation of diplomas/certificate for top 10 players from customizaeble templates
+ - Automated generation of diplomas/certificate for top 10 players from customizable templates
 
  ## Limitations
  - Lichess limits number of tournaments one user can create in a day to 12 public or 24 private tournaments
- - Currenty only arean tournaments are supported. Swiss tournaments can be added if there's demand for it
+ - Not all attributes are copied to a template from an existing tournaments as lichess API doesn't provide full information
 
  Contributions are welcome
 
