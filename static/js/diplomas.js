@@ -2,6 +2,43 @@
 
 const e = React.createElement;
 
+// From https://github.com/kennethjiang/js-file-download/
+function DownloadFile(data, filename, mime, bom) {
+  var blobData = (typeof bom !== 'undefined') ? [bom, data] : [data]
+  var blob = new Blob(blobData, {type: mime || 'application/octet-stream'});
+  if (typeof window.navigator.msSaveBlob !== 'undefined') {
+      // IE workaround for "HTML7007: One or more blob URLs were
+      // revoked by closing the blob for which they were created.
+      // These URLs will no longer resolve as the data backing
+      // the URL has been freed."
+      window.navigator.msSaveBlob(blob, filename);
+  }
+  else {
+      var blobURL = (window.URL && window.URL.createObjectURL) ? window.URL.createObjectURL(blob) : window.webkitURL.createObjectURL(blob);
+      var tempLink = document.createElement('a');
+      tempLink.style.display = 'none';
+      tempLink.href = blobURL;
+      tempLink.setAttribute('download', filename);
+
+      // Safari thinks _blank anchor are pop ups. We only want to set _blank
+      // target if the browser does not support the HTML5 download attribute.
+      // This allows you to download files in desktop safari if pop up blocking
+      // is enabled.
+      if (typeof tempLink.download === 'undefined') {
+          tempLink.setAttribute('target', '_blank');
+      }
+
+      document.body.appendChild(tempLink);
+      tempLink.click();
+
+      // Fixes "webkit blob resource error 1"
+      setTimeout(function() {
+          document.body.removeChild(tempLink);
+          window.URL.revokeObjectURL(blobURL);
+      }, 200)
+  }
+}
+
 class DiplomaConfiguration extends React.Component {
   constructor(props) {
     super(props);
@@ -528,7 +565,7 @@ function TournamentLine(props) {
           setLoading({ request: true, loading: false });
         } else {
           alert("Invalid tournament URL")
-          onDelete(props.id);
+          props.onDelete(props.id);
         }
       });
   });
@@ -569,34 +606,66 @@ function DiplomasLine(props) {
       });
     })
   });
-  return props.tournament.standing.players.map(player => {
-    return e('a', {
-      className: "diploma_preview_canvas",
-      key: `canvas-${props.tournament.id}-${player.rank}`,
-      onClick: (event) => {
-        const tempCanvas = new fabric.StaticCanvas(document.createElement('canvas'));
-        tempCanvas.setDimensions(
-          {
-            width: props.canvas.getWidth(),
-            height: props.canvas.getHeight()
-          });
-        props.fieldsRef.current.renderOnCanvas(tempCanvas, {
-          tournament: props.tournament,
-          player: player
-        }).then(() => {
-          tempCanvas.setDimensions(
-            {
-              width: props.canvas.getWidth() * 4,
-              height: props.canvas.getHeight() * 4
-            });
-          tempCanvas.setZoom(4);
-          const newWindow = window.open("")
-          newWindow.document.write(`<img src="${tempCanvas.toDataURL()}">`);
+
+  const renderDiploma = (player) => {
+    const tempCanvas = new fabric.StaticCanvas(document.createElement('canvas'));
+    tempCanvas.setDimensions(
+      {
+        width: props.canvas.getWidth(),
+        height: props.canvas.getHeight()
+      });
+    return props.fieldsRef.current.renderOnCanvas(tempCanvas, {
+      tournament: props.tournament,
+      player: player
+    }).then(() => {
+      tempCanvas.setDimensions(
+        {
+          width: props.canvas.getWidth() * 4,
+          height: props.canvas.getHeight() * 4
+        });
+      tempCanvas.setZoom(4);
+      return tempCanvas;
+    });
+  }
+
+  const DownloadDiploma = (player) => {
+    renderDiploma(player).then((tempCanvas) => {
+      fetch(tempCanvas.toDataURL()).then(res => res.blob()).then(blob => {
+        DownloadFile(blob, `${props.tournament.fullName}-${props.tournament.fullName}-${props.tournament.date}-${player.rank}.png`, 'image/png');
+      });
+    });
+  }
+
+  return e('div', {},
+    e('a', {
+      className: 'diploma_download_all',
+      onClick: (evt) => {
+        evt.preventDefault();
+        props.tournament.standing.players.forEach(player => {
+          DownloadDiploma(player);
         });
       }
-    },
-      e('canvas', { id: `canvas-${props.tournament.id}-${player.rank}` }))
-  });
+    }, 'Download all'),
+    props.tournament.standing.players.map(player => {
+      return e('a', {
+        className: "diploma_preview_canvas",
+        key: `canvas-${props.tournament.id}-${player.rank}`,
+        onClick: (evt) => {
+          evt.preventDefault();
+          renderDiploma(player).then((tempCanvas) => {
+            const newWindow = window.open("")
+            newWindow.document.write(`<img src="${tempCanvas.toDataURL()}">`);
+          });
+        }
+      },
+        e('canvas', { id: `canvas-${props.tournament.id}-${player.rank}` }),
+        e('div', {
+          className: 'download_icon',
+          onClick: (evt) => {
+            evt.stopPropagation();
+            DownloadDiploma(player);
+          }}))
+    }));
 }
 
 function Diplomas(props) {

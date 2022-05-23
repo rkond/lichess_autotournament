@@ -1,32 +1,35 @@
 .copyright {
-    margin: 0 auto;
+  margin: 0 auto;
 }
 
 .github img {
-    height: 1em;
+  height: 1em;
 }
 
 footer {
-    margin: 1em auto;
-    text-align: center;
-    grid-area: footer;
+  margin: 1em auto;
+  text-align: center;
+  grid-area: footer;
 }
+
 html {
   font-family: 'Noto Sans', Sans-Serif;
   color-scheme: light;
 }
 
-html, body {
-    margin: 0;
-    height: 100%;
-}
+html,
 body {
-    display: grid;
-    grid-gap: 10px;
-    grid-template-columns: 1fr;
-    grid-template-areas: "main" "footer";
-    grid-template-rows: 1fr 80px;
-    background: #edebe9 linear-gradient(to bottom, #dbd7d1, #edebe9 116px) no-repeat;
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  display: grid;
+  grid-gap: 10px;
+  grid-template-columns: 1fr;
+  grid-template-areas: "main""footer";
+  grid-template-rows: 1fr 80px;
+  background: #edebe9 linear-gradient(to bottom, #dbd7d1, #edebe9 116px) no-repeat;
 }
 
 a {
@@ -35,16 +38,22 @@ a {
   cursor: pointer;
 }
 
-a:hover, a:active, a:focus {
+a:hover,
+a:active,
+a:focus {
   color: #004f98;
 }
 
-h1,h2,h3 {
+h1,
+h2,
+h3 {
   font-weight: 350;
   font-family: 'Roboto', Sans-Serif;
 }
 
-input, textarea, select {
+input,
+textarea,
+select {
   background: #fafaf9;
   background-clip: border-box;
   border: 1px solid #d9d9d9;
@@ -56,26 +65,29 @@ input, textarea, select {
   margin: 0 auto;
 }
 
-.current_templates,.created_tournaments,.diploma_templates, #diplomas{
+.current_templates,
+.created_tournaments,
+.diploma_templates,
+#diplomas {
   grid-area: main;
   margin: 1em auto;
   max-width: 760px;
   padding: 1em 2em 2em 2em;
   background: white;
-  box-shadow: 0 2px 2px 0 rgba(0,0,0,0.14),0 3px 1px -2px rgba(0,0,0,0.2),0 1px 5px 0 rgba(0,0,0,0.12);
+  box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
 }
 
 .error {
-    color: #000;
-    font-weight: bold;
-    background-color: #ebaa6d;
-    width: fit-content;
-    padding: .5em 1em;
+  color: #000;
+  font-weight: bold;
+  background-color: #ebaa6d;
+  width: fit-content;
+  padding: .5em 1em;
 }
 
 .back_link {
   padding: 1em 2em;
-  font-size:  1.5em;
+  font-size: 1.5em;
   float: left;
 }
 
@@ -109,9 +121,11 @@ button:disabled {
   border: #aaa solid 1px;
   border-bottom: none;
 }
+
 .template_list li:hover {
   background-color: #e6e6e6;
 }
+
 .template_list .tournament_header {
   cursor: pointer;
   margin: -5px -24px -15px -5px;
@@ -127,10 +141,11 @@ button:disabled {
 }
 
 .template_list li:last-child {
-  border-bottom: #aaa solid 1px;;
+  border-bottom: #aaa solid 1px;
+  ;
 }
 
-.tournament_list_line{
+.tournament_list_line {
   margin-bottom: .5em;
 }
 
@@ -157,7 +172,7 @@ button:disabled {
   content: ": ";
 }
 
-.tournament_form_field input[type=number]{
+.tournament_form_field input[type=number] {
   width: 55px;
 }
 
@@ -167,105 +182,114 @@ button:disabled {
 }
 
 #diploma_fields {
-    width: 320px;
+  width: 320px;
 }
 
-.diploma_field{
-    border: solid lightgray 1px;
-    width: 340px;
-    display: inline-block;
-    padding: .5em 24px .5em .5em;
-    margin: .25em 0;
-    position: relative;
+.diploma_field {
+  border: solid lightgray 1px;
+  width: 340px;
+  display: inline-block;
+  padding: .5em 24px .5em .5em;
+  margin: .25em 0;
+  position: relative;
 }
 
-.diploma_field .font_input{
-    width: 120px;
+.diploma_field .font_input {
+  width: 120px;
 }
-.diploma_field .text_input{
-    width: 240px;
+
+.diploma_field .text_input {
+  width: 240px;
 }
+
 .diploma_field input[type=number] {
-    width: 3em;
+  width: 3em;
 }
+
 .diploma_field input[type=color] {
   padding: 0;
   margin: 0 5px;
   top: 5px;
   position: relative;
 }
-.diploma_field button{
-    margin: 0 .5em;
+
+.diploma_field button {
+  margin: 0 .5em;
 }
 
 .diploma_image_thumbnail {
-    float: right;
-    max-width: 60px;
-    max-height: 80px;
-    min-height: 80px
+  float: right;
+  max-width: 60px;
+  max-height: 80px;
+  min-height: 80px
 }
 
 #canvas_container {
-    padding: 5px;
-    border: darkgrey solid;
-    border-radius: 5px;
-    width: fit-content;
-    height: fit-content;
+  padding: 5px;
+  border: darkgrey solid;
+  border-radius: 5px;
+  width: fit-content;
+  height: fit-content;
 }
 
 @media (min-width: 715px) {
-    #canvas_container {
-        float: right;
-    }
+  #canvas_container {
+    float: right;
+  }
 }
 
 #diplomas {
-    width: 384px;
-    float: left;
-    margin: 1em 2em;
+  width: 384px;
+  float: left;
+  margin: 1em 2em;
 }
 
 .close {
-    position: absolute;
-    right: 3px;
-    top: 3px;
-    width: 12px;
-    height: 12px;
-    opacity: 0.3;
+  position: absolute;
+  right: 3px;
+  top: 3px;
+  width: 12px;
+  height: 12px;
+  opacity: 0.3;
 }
+
 .close:hover {
-    opacity: 1;
+  opacity: 1;
 }
-.close:before, .close:after {
-    position: absolute;
-    left: 5px;
-    content: ' ';
-    height: 13px;
-    width: 2px;
-    background-color: #333;
-}
-.close:before {
-    transform: rotate(45deg);
-}
+
+.close:before,
 .close:after {
-    transform: rotate(-45deg);
+  position: absolute;
+  left: 5px;
+  content: ' ';
+  height: 13px;
+  width: 2px;
+  background-color: #333;
+}
+
+.close:before {
+  transform: rotate(45deg);
+}
+
+.close:after {
+  transform: rotate(-45deg);
 }
 
 input[type=color] {
-    border: none;
-    width: 1.5em;
-    height: 1.5em;
+  border: none;
+  width: 1.5em;
+  height: 1.5em;
 }
 
 .tournament_list ol {
-    padding: 0;
+  padding: 0;
 }
 
 .tournament_line {
-    position: relative;
-    width: 320px;
-    padding-right: 24px;
-    list-style: none;
+  position: relative;
+  width: 320px;
+  padding-right: 24px;
+  list-style: none;
 }
 
 .tournament_line.highlight {
@@ -278,26 +302,36 @@ input[type=color] {
 }
 
 .diploma_preview_canvas {
-    width: 91px;
-    height: 128px;
-    display: inline-block;
-    margin: 1px;
-    overflow: hidden;
-    cursor: pointer;
+  position: relative;
+  width: 91px;
+  height: 128px;
+  display: inline-block;
+  margin: 1px;
+  overflow: hidden;
+  cursor: pointer;
 }
+
 .diploma_list {
-    padding: 0;
+  padding: 0;
 }
-.diploma_list li{
-    list-style: none;
-    display: inline-block;
-    margin: 0 .5em;
-    text-align: center;
+
+.diploma_list li {
+  list-style: none;
+  display: inline-block;
+  margin: 0 .5em;
+  text-align: center;
 }
 
 .diploma_list li button {
   margin: .1em 0;
   width: 100%;
+}
+
+.diploma_download_all {
+  display: block;
+  width: 100%;
+  text-align: right;
+  margin: .1em;
 }
 
 .saving_done::before {
@@ -314,129 +348,167 @@ input[type=color] {
   padding: .5em 1em;
 }
 
+.download_icon {
+  cursor: pointer;
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 2px;
+  opacity: 50%;
+  width: 16px;
+  height: 16px;
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 490 490" style="enable-background:new 0 0 490 490" xml:space="preserve"><path d="M245 0c-9.5 0-17.2 7.7-17.2 17.2v331.2L169 289.6c-6.7-6.7-17.6-6.7-24.3 0s-6.7 17.6 0 24.3l88.1 88.1c3.3 3.3 7.7 5 12.1 5 4.4 0 8.8-1.7 12.1-5l88.1-88.1c6.7-6.7 6.7-17.6 0-24.3-6.7-6.7-17.6-6.7-24.3 0L262 348.4V17.1c.1-9.5-7.5-17.1-17-17.1z"/><path d="M462.1 472.9v-99.7c0-9.5-7.7-17.2-17.2-17.2s-17.2 7.7-17.2 17.2v82.6H62.2v-82.6c0-9.5-7.7-17.2-17.1-17.2s-17.2 7.7-17.2 17.2v99.7c0 9.5 7.7 17.1 17.2 17.1h399.8c9.5 0 17.2-7.6 17.2-17.1z"/></svg>');
+}
 
 .lds-roller {
-    display: block;
-    position: relative;
-    width: 80px;
-    height: 80px;
-    margin: 1em auto;
-  }
-  .lds-roller div {
-    animation: lds-roller 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
-    transform-origin: 40px 40px;
-  }
-  .lds-roller div:after {
-    content: " ";
-    display: block;
-    position: absolute;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: rgb(122, 122, 122);
-    margin: -4px 0 0 -4px;
-  }
-  .lds-roller div:nth-child(1) {
-    animation-delay: -0.036s;
-  }
-  .lds-roller div:nth-child(1):after {
-    top: 63px;
-    left: 63px;
-  }
-  .lds-roller div:nth-child(2) {
-    animation-delay: -0.072s;
-  }
-  .lds-roller div:nth-child(2):after {
-    top: 68px;
-    left: 56px;
-  }
-  .lds-roller div:nth-child(3) {
-    animation-delay: -0.108s;
-  }
-  .lds-roller div:nth-child(3):after {
-    top: 71px;
-    left: 48px;
-  }
-  .lds-roller div:nth-child(4) {
-    animation-delay: -0.144s;
-  }
-  .lds-roller div:nth-child(4):after {
-    top: 72px;
-    left: 40px;
-  }
-  .lds-roller div:nth-child(5) {
-    animation-delay: -0.18s;
-  }
-  .lds-roller div:nth-child(5):after {
-    top: 71px;
-    left: 32px;
-  }
-  .lds-roller div:nth-child(6) {
-    animation-delay: -0.216s;
-  }
-  .lds-roller div:nth-child(6):after {
-    top: 68px;
-    left: 24px;
-  }
-  .lds-roller div:nth-child(7) {
-    animation-delay: -0.252s;
-  }
-  .lds-roller div:nth-child(7):after {
-    top: 63px;
-    left: 17px;
-  }
-  .lds-roller div:nth-child(8) {
-    animation-delay: -0.288s;
-  }
-  .lds-roller div:nth-child(8):after {
-    top: 56px;
-    left: 12px;
-  }
-  @keyframes lds-roller {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
-    }
+  display: block;
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 1em auto;
+}
+
+.lds-roller div {
+  animation: lds-roller 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  transform-origin: 40px 40px;
+}
+
+.lds-roller div:after {
+  content: " ";
+  display: block;
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgb(122, 122, 122);
+  margin: -4px 0 0 -4px;
+}
+
+.lds-roller div:nth-child(1) {
+  animation-delay: -0.036s;
+}
+
+.lds-roller div:nth-child(1):after {
+  top: 63px;
+  left: 63px;
+}
+
+.lds-roller div:nth-child(2) {
+  animation-delay: -0.072s;
+}
+
+.lds-roller div:nth-child(2):after {
+  top: 68px;
+  left: 56px;
+}
+
+.lds-roller div:nth-child(3) {
+  animation-delay: -0.108s;
+}
+
+.lds-roller div:nth-child(3):after {
+  top: 71px;
+  left: 48px;
+}
+
+.lds-roller div:nth-child(4) {
+  animation-delay: -0.144s;
+}
+
+.lds-roller div:nth-child(4):after {
+  top: 72px;
+  left: 40px;
+}
+
+.lds-roller div:nth-child(5) {
+  animation-delay: -0.18s;
+}
+
+.lds-roller div:nth-child(5):after {
+  top: 71px;
+  left: 32px;
+}
+
+.lds-roller div:nth-child(6) {
+  animation-delay: -0.216s;
+}
+
+.lds-roller div:nth-child(6):after {
+  top: 68px;
+  left: 24px;
+}
+
+.lds-roller div:nth-child(7) {
+  animation-delay: -0.252s;
+}
+
+.lds-roller div:nth-child(7):after {
+  top: 63px;
+  left: 17px;
+}
+
+.lds-roller div:nth-child(8) {
+  animation-delay: -0.288s;
+}
+
+.lds-roller div:nth-child(8):after {
+  top: 56px;
+  left: 12px;
+}
+
+@keyframes lds-roller {
+  0% {
+    transform: rotate(0deg);
   }
 
+  100% {
+    transform: rotate(360deg);
+  }
+}
 
-  .lds-inline {
-    display: inline;
-    position: relative;
-    width: 2em;
-    height: 1em;
-    margin: .1em .5em;
-    padding: 5px 10px;
+
+.lds-inline {
+  display: inline;
+  position: relative;
+  width: 2em;
+  height: 1em;
+  margin: .1em .5em;
+  padding: 5px 10px;
+}
+
+.lds-inline div {
+  display: inline-block;
+  position: absolute;
+  left: 10%;
+  width: 20%;
+  background: #555;
+  animation: lds-inline 1.2s cubic-bezier(0, 0.5, 0.5, 1) infinite;
+}
+
+.lds-inline div:nth-child(1) {
+  left: 10%;
+  animation-delay: -0.24s;
+}
+
+.lds-inline div:nth-child(2) {
+  left: 40%;
+  animation-delay: -0.12s;
+}
+
+.lds-inline div:nth-child(3) {
+  left: 70%;
+  animation-delay: 0;
+}
+
+@keyframes lds-inline {
+  0% {
+    top: 10%;
+    height: 80%;
   }
-  .lds-inline div {
-    display: inline-block;
-    position: absolute;
-    left: 10%;
-    width: 20%;
-    background: #555;
-    animation: lds-inline 1.2s cubic-bezier(0, 0.5, 0.5, 1) infinite;
+
+  50%,
+  100% {
+    top: 30%;
+    height: 40%;
   }
-  .lds-inline div:nth-child(1) {
-    left: 10%;
-    animation-delay: -0.24s;
-  }
-  .lds-inline div:nth-child(2) {
-    left: 40%;
-    animation-delay: -0.12s;
-  }
-  .lds-inline div:nth-child(3) {
-    left: 70%;
-    animation-delay: 0;
-  }
-  @keyframes lds-inline {
-    0% {
-      top: 10%;
-      height: 80%;
-    }
-    50%, 100% {
-      top: 30%;
-      height: 40%;
-    }
-  }
+}
