@@ -88,7 +88,6 @@ select {
 .back_link {
   padding: 1em 2em;
   font-size: 1.5em;
-  float: left;
 }
 
 button {
@@ -230,11 +229,15 @@ button:disabled {
   border-radius: 5px;
   width: fit-content;
   height: fit-content;
+  margin: 1em 2em ;
 }
 
-@media (min-width: 715px) {
+@media (min-width: 892px) {
   #canvas_container {
     float: right;
+  }
+  .back_link {
+    float: left;
   }
 }
 
