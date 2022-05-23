@@ -300,6 +300,20 @@ input[type=color] {
   width: 100%;
 }
 
+.saving_done::before {
+  content: '✓';
+  font-size: 1.3em;
+  color: green;
+}
+
+.saving_error {
+  color: #000;
+  font-weight: bold;
+  background-color: #ebaa6d;
+  width: fit-content;
+  padding: .5em 1em;
+}
+
 
 .lds-roller {
     display: block;
@@ -384,5 +398,45 @@ input[type=color] {
     }
     100% {
       transform: rotate(360deg);
+    }
+  }
+
+
+  .lds-inline {
+    display: inline;
+    position: relative;
+    width: 2em;
+    height: 1em;
+    margin: .1em .5em;
+    padding: 5px 10px;
+  }
+  .lds-inline div {
+    display: inline-block;
+    position: absolute;
+    left: 10%;
+    width: 20%;
+    background: #555;
+    animation: lds-inline 1.2s cubic-bezier(0, 0.5, 0.5, 1) infinite;
+  }
+  .lds-inline div:nth-child(1) {
+    left: 10%;
+    animation-delay: -0.24s;
+  }
+  .lds-inline div:nth-child(2) {
+    left: 40%;
+    animation-delay: -0.12s;
+  }
+  .lds-inline div:nth-child(3) {
+    left: 70%;
+    animation-delay: 0;
+  }
+  @keyframes lds-inline {
+    0% {
+      top: 10%;
+      height: 80%;
+    }
+    50%, 100% {
+      top: 30%;
+      height: 40%;
     }
   }

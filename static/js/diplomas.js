@@ -7,7 +7,8 @@ class DiplomaConfiguration extends React.Component {
     super(props);
     this.state = {
       addField: 'BackgroundImage',
-      name: props.name
+      name: props.name,
+      saving: false
     }
     this.children = [];
     this.canvas = props.canvas;
@@ -25,12 +26,14 @@ class DiplomaConfiguration extends React.Component {
     let newFields = Object.assign({}, this.props.fields);
     Object.assign(newFields[fieldKey], newState);
     this.props.setFields(newFields);
+    this.setState({saving: false});
   };
 
   handleRemove(fieldKey) {
     let newFields = Object.assign({}, this.props.fields);
     delete newFields[fieldKey];
     this.props.setFields(newFields);
+    this.setState({saving: false});
   };
 
   addField() {
@@ -39,10 +42,12 @@ class DiplomaConfiguration extends React.Component {
     while (this.props.fields[`${this.state.addField}-${i}`]) i++;
     newFields[`${this.state.addField}-${i}`] = { type: this.state.addField };
     this.props.setFields(newFields);
+    this.setState({saving: false});
   }
 
   save() {
     // TODO: Error reporting
+    this.setState({saving: true});
     fetch(`/api/v1/diploma/template/${diploma_template_id}?_xsrf=${xsrf}`, {
       credentials: 'include',
       method: 'POST',
@@ -57,6 +62,10 @@ class DiplomaConfiguration extends React.Component {
         }),
         fields: this.props.fields,
       })
+    }).then(() => {
+      this.setState({saving: 'ok'});
+    }).catch((err) => {
+      this.setState({saving: {error: `Canno save template: ${err}`}});
     })
   };
 
@@ -103,7 +112,10 @@ class DiplomaConfiguration extends React.Component {
       ]),
       e('button', { key: "add_btn", onClick: this.addField.bind(this) }, "Add"),
       e('div', { key: "diploma_field_list", className: "diploma_field_list" }, childrenElements),
-      e('button', { key: "save_btn", onClick: this.save.bind(this) }, "Save")
+      e('button', { key: "save_btn", onClick: this.save.bind(this), disabled: this.state.saving === true }, "Save"),
+      (this.state.saving === true)? e(LoaderInline, {key: 'savingState'}) : null,
+      (this.state.saving === 'ok')? e('span', {key: 'savingState', className: "saving_done"}, 'saved') : null,
+      (this.state.saving.error)? e('span', {key: 'savingState', className: "saving_error"}, this.state.saving.error) : null,
     ]
       ;
 
@@ -641,6 +653,11 @@ function Diplomas(props) {
 
 function Loader(props) {
   return e('div', { className: 'lds-roller' }, e('div', {}), e('div', {}), e('div', {}), e('div', {}), e('div', {}), e('div', {}), e('div', {}), e('div', {}));
+}
+
+
+function LoaderInline(props) {
+  return e('div', { className: 'lds-inline', width: props.width, height: props.height }, e('div', {}), e('div', {}), e('div', {}));
 }
 
 document.addEventListener('DOMContentLoaded', () => {
