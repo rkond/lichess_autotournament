@@ -878,7 +878,7 @@ function TorunamentLine(props) {
       checked: props.selected,
       onChange: (event) => { event.stopPropagation(); props.onSelected() }
     }) : null,
-    props.tournament.fullName, " ",
+    props.tournament.fullName || props.tournament.name, " ",
     e('span', {
       className: "tournament_date"
     }, new Date(props.tournament.startsAt).toLocaleTimeString(undefined, { hour12: false, hour: '2-digit', minute: '2-digit', year: 'numeric', month: 'short', day: 'numeric', weekday: 'short' })
