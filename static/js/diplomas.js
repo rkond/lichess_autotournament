@@ -631,7 +631,8 @@ function DiplomasLine(props) {
   const DownloadDiploma = (player) => {
     renderDiploma(player).then((tempCanvas) => {
       fetch(tempCanvas.toDataURL()).then(res => res.blob()).then(blob => {
-        DownloadFile(blob, `${props.tournament.date}-${props.tournament.fullName}-${player.rank}.png`, 'image/png');
+        const date = new Date(props.tournament.startsAt);
+        DownloadFile(blob, `${date.getFullYear()}-${date.getMonth().toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}-${props.tournament.fullName}-${player.rank}.png`, 'image/png');
       });
     });
   }
