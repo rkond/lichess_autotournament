@@ -1,5 +1,21 @@
 {% extends 'base.html' %}
 
+{% block head %}
+{% if handler.options.debug %}
+<script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+{% else %}
+<script src="{{ static_url('js/react.production.min.js') }}" crossorigin></script>
+<script src="{{ static_url('js/react-dom.production.min.js') }}" crossorigin></script>
+{% end %}
+<script src="{{ static_url('js/login.js') }}"></script>
+<script>
+  const xsrf = "{{ handler.xsrf_token }}";
+  const template_id = "{{ id }}";
+</script>
+{% end %}
+
 {% block content %}
-    <a href="/login"><button>Login with Lichess</button></a>
+<div id="app_root">
+</div>
 {% end %}

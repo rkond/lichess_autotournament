@@ -83,8 +83,10 @@ class TeamsAPI(BaseAPIHandler):
 
 
 class HomeHandler(BaseHandler):
-    @tornado.web.authenticated  # type: ignore[misc]
     async def get(self) -> None:
+        if not self.current_user:
+            self.render('login.html')
+            return
         table = self.db.table('templates')
         T = Query()
         templates = table.search((T.user == self.current_user['id']) & (T.tournament_set == 'default'))
@@ -149,6 +151,13 @@ class LoginHandler(BaseHandler):
             self.redirect(next)
 
 
+class LogoutHandler(BaseHandler):
+    async def get(self) -> None:
+        self.check_xsrf_cookie()
+        self.clear_cookie('t')
+        self.redirect('/')
+
+
 def define_options() -> None:
     define("config", default="/etc/lichess/tournaments.conf")
     define("template_path", default=os.path.normpath(os.path.join(base_path, 'templates')))
@@ -194,6 +203,7 @@ urls: tornado.web._RuleList = [
     (r"/diplomas/(delete)/([-a-zA-Z0-9_=]+)", DiplomasHandler),
     (r"/diplomas/(edit)/([-a-zA-Z0-9_=]+)", DiplomasHandler),
     (r"/login", LoginHandler),
+    (r"/logout", LogoutHandler),
 
     (r"/api/v1/diploma/template/([-a-zA-Z0-9_=]+)?", DiplomaTemplateHandler),
     (r"/api/v1/tournament/template/([-a-zA-Z0-9_=]*)", TournamentTemplateHandler),

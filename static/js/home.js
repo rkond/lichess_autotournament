@@ -148,6 +148,9 @@ function TournamentTemplates(props) {
   return loading.loading ? e(Loader, {}) :
     e('div', { id: 'application_root' },
       e('div', { className: 'current_templates' },
+        e('div', {id: 'logout', className: 'logout'},
+          e('span', {}, `${username} `),
+          e('a', { href: `/logout?_xsrf=${xsrf}`}, 'logout')),
         e('h1', {}, "Tournament templates"),
         e('ol', { className: 'template_list' },
           templates.map((template, index) => e(TemplateBox, {
