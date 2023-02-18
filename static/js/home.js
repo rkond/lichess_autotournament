@@ -145,6 +145,30 @@ function TournamentTemplates(props) {
     setSelected(s);
   }
 
+  const dragItem = React.useRef()
+  const dragOverItem = React.useRef()
+
+  const startDrag = (event, index) => {
+    dragItem.current = index
+  }
+
+  const dragEnter = (event, index) => {
+    dragOverItem.current = index
+  }
+
+  const dragDrop = (event) => {
+    templates.forEach((template, index) => template.oldIndex = index)
+    const element = templates[dragItem.current]
+    const newList = [...templates]
+    newList.splice(dragItem.current, 1)
+    newList.splice(dragOverItem.current, 0, element)
+    Promise.all(
+      newList.map((
+        template, index) => onEdit(template.oldIndex, {...template, index}))
+    ).then(() => setTemplates(newList)).catch(console.error)
+  }
+
+
   return loading.loading ? e(Loader, {}) :
     e('div', { id: 'application_root' },
       e('div', { className: 'current_templates' },
@@ -159,6 +183,9 @@ function TournamentTemplates(props) {
             template: template,
             expanded: index == expandedIndex,
             teams: teams,
+            onStartDrag: startDrag,
+            onDragEnter: dragEnter,
+            onDragDrop: dragDrop,
             onSelected: () => onSelectedTemplate(index),
             onEdit: (template) => onEdit(index, template),
             onDelete: () => onDelete(index),
@@ -198,7 +225,11 @@ function TemplateBox(props) {
   },
     e('div', {
       className: 'tournament_header',
-      onClick: props.onClick
+      onClick: props.onClick,
+      draggable: true,
+      onDragStart: e => props.onStartDrag(e, props.index),
+      onDragEnter: e => props.onDragEnter(e, props.index),
+      onDragEnd: props.onDragDrop,
     },
       props.empty ? null : e('a', { href: '#', className: 'close', onClick: (event) => { event.preventDefault(); props.onDelete(props.index) } }),
       props.empty ? null : e('input', {

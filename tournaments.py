@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta
 import logging
-from backports.zoneinfo import ZoneInfo  # type: ignore[import]
+try:
+    from backports.zoneinfo import ZoneInfo  # type: ignore[import]
+except ModuleNotFoundError:
+    from zoneinfo import ZoneInfo
 from json import loads, dumps
 from math import floor
 from secrets import token_urlsafe
@@ -44,14 +47,14 @@ class TournamentTemplateHandler(BaseAPIHandler):
          'variant', 'rated', 'berserkable', 'streakable', 'hasChat',
          'description', 'password', 'conditions.teamMember.teamId',
          'conditions.minRating.rating', 'conditions.maxRating.rating',
-         'conditions.nbRatedGame.nb'),
+         'conditions.nbRatedGame.nb', 'index'),
         'swiss': (
          'id', 'type', 'name', 'clock.limit', 'clock.increment', 'startDate',
          'variant', 'rated', 'chatFor', 'teamId', 'nbRounds', 'roundInterval',
          'forbiddenPairings',
          'description', 'password',
          'conditions.minRating.rating', 'conditions.maxRating.rating',
-         'conditions.nbRatedGame.nb'
+         'conditions.nbRatedGame.nb', 'index'
         )
     }
 
@@ -88,6 +91,7 @@ class TournamentTemplateHandler(BaseAPIHandler):
                 if 'startDate' in t:
                     t['startDate'] = convert_start_date(t['startDate'])
 
+            res.sort(key=lambda template: template.get('index', 0))
             self.write(dumps({'templates': res, 'success': True}))
 
     @tornado.web.authenticated  # type: ignore[misc]
