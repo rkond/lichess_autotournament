@@ -6,6 +6,23 @@ const weekdays = [3, 4, 5, 6, 7, 8, 9].map(day => (new Date(`2022-01-0${day}`)).
 
 const userTeams = null;
 
+function dragDrop(n_elements) {
+  const dragItem = React.useRef()
+  const dragOverItem = React.useRef()
+
+  return {
+    onDragStart(index) { dragItem.current = index },
+    onDragEnter(index) { dragOverItem.current = index },
+    onDragDrop() {
+      const list = [...Array(n_elements).fill(null).map((element, index) => ({ index }))]
+      const element = list[dragItem.current]
+      list.splice(dragItem.current, 1)
+      list.splice(dragOverItem.current, 0, element)
+      return list
+    },
+  }
+}
+
 function TournamentTemplates(props) {
   const [templates, setTemplates] = React.useState([]);
   const [loading, setLoading] = React.useState({ request: false, loading: true });
@@ -46,7 +63,7 @@ function TournamentTemplates(props) {
       });
   });
 
-  const onEdit = (index, template) => {
+  const editTemplate = (index, template) =>
     fetch(`/api/v1/tournament/template/${templates[index].id}?_xsrf=${xsrf}`, {
       credentials: 'include',
       method: 'PATCH',
@@ -55,12 +72,18 @@ function TournamentTemplates(props) {
       },
       body: JSON.stringify(template)
     })
-      .then(res => res.json())
+    .then(res => res.json())
+    .then(res => {
+      if (!res.success) {
+        console.error(res);
+        return;
+      }
+      return res;
+    })
+
+  const onEdit = (index, template) => {
+      editTemplate(index, template)
       .then(res => {
-        if (!res.success) {
-          console.error(res);
-          return;
-        }
         setExpanded(null);
         setLoading({ request: false, loading: true });
       });
@@ -145,29 +168,15 @@ function TournamentTemplates(props) {
     setSelected(s);
   }
 
-  const dragItem = React.useRef()
-  const dragOverItem = React.useRef()
+  const templatesDragDrop = dragDrop(templates.length)
 
-  const startDrag = (event, index) => {
-    dragItem.current = index
+  const onDragDrop = () => {
+    const permutation = templatesDragDrop.onDragDrop()
+    const newTemplates = permutation.map(({ index }, newIndex) => ({...templates[index], oldIndex: index, index: newIndex }))
+    Promise.all(newTemplates.map( template => editTemplate(template.oldIndex, template)))
+    .then(() => setTemplates(newTemplates))
+    .catch(() => setTemplates(templates))
   }
-
-  const dragEnter = (event, index) => {
-    dragOverItem.current = index
-  }
-
-  const dragDrop = (event) => {
-    templates.forEach((template, index) => template.oldIndex = index)
-    const element = templates[dragItem.current]
-    const newList = [...templates]
-    newList.splice(dragItem.current, 1)
-    newList.splice(dragOverItem.current, 0, element)
-    Promise.all(
-      newList.map((
-        template, index) => onEdit(template.oldIndex, {...template, index}))
-    ).then(() => setTemplates(newList)).catch(console.error)
-  }
-
 
   return loading.loading ? e(Loader, {}) :
     e('div', { id: 'application_root' },
@@ -183,9 +192,9 @@ function TournamentTemplates(props) {
             template: template,
             expanded: index == expandedIndex,
             teams: teams,
-            onStartDrag: startDrag,
-            onDragEnter: dragEnter,
-            onDragDrop: dragDrop,
+            onStartDrag: templatesDragDrop.onDragStart,
+            onDragEnter: templatesDragDrop.onDragEnter,
+            onDragDrop: onDragDrop,
             onSelected: () => onSelectedTemplate(index),
             onEdit: (template) => onEdit(index, template),
             onDelete: () => onDelete(index),
@@ -227,8 +236,8 @@ function TemplateBox(props) {
       className: 'tournament_header',
       onClick: props.onClick,
       draggable: true,
-      onDragStart: e => props.onStartDrag(e, props.index),
-      onDragEnter: e => props.onDragEnter(e, props.index),
+      onDragStart: () => props.onStartDrag(props.index),
+      onDragEnter: () => props.onDragEnter(props.index),
       onDragEnd: props.onDragDrop,
     },
       props.empty ? null : e('a', { href: '#', className: 'close', onClick: (event) => { event.preventDefault(); props.onDelete(props.index) } }),
