@@ -155,6 +155,7 @@ class LogoutHandler(BaseHandler):
     async def get(self) -> None:
         self.check_xsrf_cookie()
         self.clear_cookie('t')
+        self.clear_cookie('u')
         self.redirect('/')
 
 

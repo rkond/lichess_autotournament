@@ -1,7 +1,7 @@
 import logging
 
 from typing import cast, Any
-from json import dumps
+from json import dumps, loads
 
 import tornado.httpserver
 import tornado.ioloop
@@ -30,12 +30,19 @@ class BaseHandler(tornado.web.RequestHandler):  # type: ignore[misc]
 
     async def prepare(self) -> None:
         self.token = (self.get_secure_cookie('t') or b'').decode()
+        user = (self.get_secure_cookie('u') or b'').decode()
+
         if self.token:
             try:
+                if user:
+                    self._current_user = loads(user)
+                    return
                 self._current_user = await self.lichess.get_current_user(self.token)
+                self.set_secure_cookie('u', dumps(self._current_user), 1)
             except Exception as e:
                 logging.warning(f"Cannot get current user: {e}")
                 self.clear_cookie('t')
+                self.clear_cookie('u')
 
     def get_login_url(self) -> str:
         return "/login"
