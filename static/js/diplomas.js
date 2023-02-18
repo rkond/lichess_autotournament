@@ -1,6 +1,8 @@
 'use strict';
 
 const e = React.createElement;
+const PDFJS = window['pdfjs-dist/build/pdf'];
+PDFJS.GlobalWorkerOptions.workerSrc = '/static/js/pdf.worker.min.js'
 
 // From https://github.com/kennethjiang/js-file-download/
 function DownloadFile(data, filename, mime, bom) {
@@ -216,12 +218,34 @@ class BackgroundImage extends React.Component {
       e('input', {
         id: "background_image",
         type: "file",
-        accept: "image/*",
+        accept: "image/*,application/pdf",
         onChange: (event) => {
           const inputforupload = event.target;
           const readerobj = new FileReader();
           readerobj.onload = () => {
-            this.props.handleChange(this.props.fieldKey, { image: readerobj.result });
+            PDFJS.getDocument(readerobj.result).promise.then( pdf => {
+              const canvas = document.createElement('canvas')
+              pdf.getPage(1).then(page => {
+                var viewport = page.getViewport({ scale: 4, });
+                var context = canvas.getContext('2d');
+
+                canvas.width = Math.floor(viewport.width);
+                canvas.height = Math.floor(viewport.height);
+                canvas.style.width = Math.floor(viewport.width) + "px";
+                canvas.style.height =  Math.floor(viewport.height) + "px";
+
+                var renderContext = {
+                  canvasContext: context,
+                  transform: null,
+                  viewport: viewport
+                };
+                page.render(renderContext).promise.then(() => {
+                  this.props.handleChange(this.props.fieldKey, { image: canvas.toDataURL('image/png') })
+                });
+              })
+            }).catch(() => {
+              this.props.handleChange(this.props.fieldKey, { image: readerobj.result });
+            })
           };
           readerobj.readAsDataURL(inputforupload.files[0]);
         }
