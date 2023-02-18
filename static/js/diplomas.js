@@ -226,7 +226,7 @@ class BackgroundImage extends React.Component {
             PDFJS.getDocument(readerobj.result).promise.then( pdf => {
               const canvas = document.createElement('canvas')
               pdf.getPage(1).then(page => {
-                var viewport = page.getViewport({ scale: 4, });
+                var viewport = page.getViewport({ scale: 2, });
                 var context = canvas.getContext('2d');
 
                 canvas.width = Math.floor(viewport.width);
