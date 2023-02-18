@@ -29,6 +29,7 @@ class DiplomaTemplateHandler(BaseAPIHandler):
             self.write(dumps(template))
         else:
             templates = table.search((T.user == self.current_user['id']))
+            templates.sort(key=lambda template: template.get('index', 0))
             self.write(dumps({'success': True, 'templates': templates}))
 
     @tornado.web.authenticated  # type: ignore[misc]
@@ -57,3 +58,19 @@ class DiplomaTemplateHandler(BaseAPIHandler):
         table = self.db.table('diploma_templates')
         u = table.remove((T.user == self.current_user['id']) & (T.id == id))
         self.write(dumps({'success': bool(u)}))
+
+    @tornado.web.authenticated  # type: ignore[misc]
+    def patch(self, id: str) -> None:
+        value = {}
+        try:
+            value = loads(self.request.body.decode())
+        except ValueError:
+            raise HTTPError(400, "Invalid JSON")
+        table = self.db.table('diploma_templates')
+        T = Query()
+        template = table.get((T.user == self.current_user['id']) & (T.id == id))
+        if not template:
+            raise HTTPError(404, f"No template with id \"{id}\" for user: \"{self.current_user['id']}\"")
+        template['index'] = value.get('index', 0)
+        table.upsert(template, (T.user == self.current_user['id']) & (T.id == id))
+        self.write(dumps({'success': True}))

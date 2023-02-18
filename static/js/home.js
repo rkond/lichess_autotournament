@@ -173,7 +173,9 @@ function TournamentTemplates(props) {
   const onDragDrop = () => {
     const permutation = templatesDragDrop.onDragDrop()
     const newTemplates = permutation.map(({ index }, newIndex) => ({...templates[index], oldIndex: index, index: newIndex }))
-    Promise.all(newTemplates.map( template => editTemplate(template.oldIndex, template)))
+    Promise.all(newTemplates
+      .filter(template => template.index !== template.oldIndex)
+      .map(template => editTemplate(template.oldIndex, template)))
     .then(() => setTemplates(newTemplates))
     .catch(() => setTemplates(templates))
   }
@@ -982,6 +984,38 @@ function DiplomaTemplates(props) {
     window.location.href = `/diplomas/edit/${template.id}?${(new URLSearchParams(Array.from(props.selectedTournaments).map(tournament => ['u', getTournamentURL(tournament)]))).toString()}`;
   }
 
+  const editDiploma = (index, diploma) => {
+    fetch(`/api/v1/diploma/template/${diplomas[index].id}?_xsrf=${xsrf}`, {
+      credentials: 'include',
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'appication/json'
+      },
+      body: JSON.stringify(diploma)
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (!res.success) {
+        console.error(res);
+        return;
+      }
+      return res;
+    })
+  }
+
+  const diplomaDragDrop = dragDrop(diplomas.length)
+
+  const onDragDrop = () => {
+    const permutation = diplomaDragDrop.onDragDrop()
+    const newDiplomas = permutation.map(({ index }, newIndex) => ({...diplomas[index], oldIndex: index, index: newIndex }))
+    Promise.all(
+      newDiplomas
+        .filter(template => template.index !== template.oldIndex)
+        .map(template => editDiploma(template.oldIndex, template)))
+    .then(() => setDiplomas(newDiplomas))
+    .catch(() => setDiplomas(templates))
+  }
+
   return e('div', {
     className: 'diploma_templates'
   },
@@ -990,9 +1024,13 @@ function DiplomaTemplates(props) {
       className: 'diploma_list',
     },
       loading.loading ? e(Loader, {}) : (diplomas.length == 0 ? "Nothing here" :
-        diplomas.map(t => e('li', {
+        diplomas.map((t, index) => e('li', {
           className: 'diploma_template',
-          key: t.id
+          key: t.id,
+          draggable: true,
+          onDragStart: () => diplomaDragDrop.onDragStart(index),
+          onDragEnter: () => diplomaDragDrop.onDragEnter(index),
+          onDragEnd: onDragDrop
         },
           e('a', {
             href: `/diplomas/edit/${t.id}`
