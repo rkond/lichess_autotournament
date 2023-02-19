@@ -1007,8 +1007,8 @@ function DiplomaTemplates(props) {
     window.location.href = `/diplomas/edit/${template.id}?${(new URLSearchParams(Array.from(props.selectedTournaments).map(tournament => ['u', getTournamentURL(tournament)]))).toString()}`;
   }
 
-  const editDiploma = (index, diploma) => {
-    fetch(`/api/v1/diploma/template/${diplomas[index].id}?_xsrf=${xsrf}`, {
+  const editDiploma = (diploma) => {
+    return fetch(`/api/v1/diploma/template/${diploma.id}?_xsrf=${xsrf}`, {
       credentials: 'include',
       method: 'PATCH',
       headers: {
@@ -1026,6 +1026,35 @@ function DiplomaTemplates(props) {
     })
   }
 
+  const onDuplicate = (index) => {
+    fetch(`/api/v1/diploma/template/duplicate/${diplomas[index].id}?_xsrf=${xsrf}`, {
+      credentials: 'include',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'appication/json'
+      }
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (!res.success) {
+        console.error(res);
+        return;
+      }
+      const newDiploma = { ...res.value, name: `Copy of ${res.value.name || 'Unnamed'}`}
+      const newDiplomas = [...diplomas]
+      newDiplomas.splice(index + 1, 0, newDiploma)
+      Promise.all([
+        ...diplomas.slice(index + 1).map(
+          (diploma, idx) => editDiploma({...diploma, index: idx + index + 2})),
+          editDiploma(newDiploma)])
+      .then( () => {
+        setDiplomas(newDiplomas)
+      })
+      .catch( (err) => {
+        console.log(err)
+      })
+    })
+  }
   const diplomaDragDrop = dragDrop(diplomas.length)
 
   const onDragDrop = () => {
@@ -1034,7 +1063,7 @@ function DiplomaTemplates(props) {
     Promise.all(
       newDiplomas
         .filter(template => template.index !== template.oldIndex)
-        .map(template => editDiploma(template.oldIndex, template)))
+        .map(template => editDiploma(template)))
     .then(() => setDiplomas(newDiplomas))
     .catch(() => setDiplomas(templates))
   }
@@ -1070,6 +1099,9 @@ function DiplomaTemplates(props) {
             onClick: () => onApply(t)
           }, "Apply to", e('br', {}), "selected"),
           e('br', {}),
+          e('button', {
+            onClick: () => onDuplicate(index)
+          }, "Duplicate"),
           e('button', {
             onClick: () => onDelete(t)
           }, "Delete"))))),

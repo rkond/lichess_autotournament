@@ -20,7 +20,7 @@ from tinydb import TinyDB, Query
 
 from lichessapi import LichessAPI
 from basehandler import BaseHandler, BaseAPIHandler
-from diplomas import DiplomaTemplateHandler
+from diplomas import DiplomaTemplateHandler, DiplomaDuplicateHandler
 from tournaments import TournamentTemplateHandler, TournamentCreateHandler
 
 from version import __version__, __revision__
@@ -207,6 +207,7 @@ urls: tornado.web._RuleList = [
     (r"/logout", LogoutHandler),
 
     (r"/api/v1/diploma/template/([-a-zA-Z0-9_=]+)?", DiplomaTemplateHandler),
+    (r"/api/v1/diploma/template/duplicate/([-a-zA-Z0-9_=]+)?", DiplomaDuplicateHandler),
     (r"/api/v1/tournament/template/([-a-zA-Z0-9_=]*)", TournamentTemplateHandler),
     (r"/api/v1/tournament/create", TournamentCreateHandler),
     (r"/api/v1/tournament/last", TournamentCreateHandler),
