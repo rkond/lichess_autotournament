@@ -105,12 +105,14 @@ function TournamentTemplates(props) {
           console.error(res);
           return;
         }
+        setExpanded(null)
         setLoading({ request: false, loading: true });
       });
   }
 
   const onSave = (template) => {
-    fetch(`/api/v1/tournament/template/?_xsrf=${xsrf}`, {
+    template.index = templates.length
+    return fetch(`/api/v1/tournament/template/?_xsrf=${xsrf}`, {
       credentials: 'include',
       method: 'POST',
       headers: {
@@ -124,10 +126,27 @@ function TournamentTemplates(props) {
           console.error(res);
           return;
         }
-        setExpanded(res.id);
+        template.id = res.id;
+        setExpanded(res.index);
         setLoading({ request: false, loading: true });
       });
   }
+
+
+  const onDuplicate = (index) => {
+    const newTemplate = { ...templates[index], name: `Copy of ${templates[index].name}`, index: index + 1 }
+    const newTemplates = [...templates]
+    newTemplates.splice(index + 1, 0, newTemplate)
+    Promise.all(
+      [...templates.slice(index + 1).map((template, idx) => editTemplate(idx + index + 1, { ...template, index: idx + index + 2})),
+        onSave(newTemplate)
+      ])
+    .then(() => {
+      setTemplates(newTemplates)
+      setExpanded(index + 1)
+    })
+  }
+
 
   const onSelectedTemplate = (index) => {
     const newTemplates = Array.from(templates);
@@ -200,6 +219,7 @@ function TournamentTemplates(props) {
             onSelected: () => onSelectedTemplate(index),
             onEdit: (template) => onEdit(index, template),
             onDelete: () => onDelete(index),
+            onDuplicate: () => onDuplicate(index),
             onClick: () => setExpanded(index == expandedIndex ? null : index),
             onCancel: () => setExpanded(null)
           })),
@@ -254,7 +274,10 @@ function TemplateBox(props) {
       }, props.empty ? "Create new template" : props.template.name),
       props.empty ? null : e('span', {
         className: "tournament_date"
-      }, moment.tz(`2022-01-0${props.template.startDate.weekday + 3}T${props.template.startDate.wall_time}:00`, props.template.startDate.timezone).format('dddd HH:mm z'))),
+      }, moment.tz(`2022-01-0${props.template.startDate.weekday + 3}T${props.template.startDate.wall_time}:00`, props.template.startDate.timezone).format('dddd HH:mm z')),
+      props.empty ? null : e('button', {
+        onClick:  (event) => { event.stopPropagation(); props.onDuplicate(props.index) }
+      }, 'Duplicate')),
     props.expanded ? e(TemplateEditor, {
       teams: props.teams,
       fields: props.empty ? {} : props.template,
