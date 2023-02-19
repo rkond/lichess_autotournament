@@ -521,7 +521,7 @@ class TextField extends React.Component {
 class TournamentsList extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { tournaments: props.tournaments };
+    this.state = { numDiplomas: 3, tournaments: props.tournaments };
   }
 
   addTournament(url) {
@@ -546,6 +546,9 @@ class TournamentsList extends React.Component {
     return e('div', {
       className: 'tournament_list'
     },
+    e('div', {
+      className: 'tournament_list_controls'
+    },
       e('input', {
         type: 'url',
         key: 'url-input',
@@ -555,6 +558,23 @@ class TournamentsList extends React.Component {
         key: 'url-button',
         onClick: this.onAdd.bind(this)
       }, "Add"),
+      e('div', {
+        className: 'top_places'
+      },
+        e('label', {
+          htmlFor: 'top_places'
+        }, 'for'),
+        e('input', {
+          type: 'number',
+          id: 'top_places',
+          min: 1,
+          max: 10,
+          value: this.state.numDiplomas,
+          onChange: (e) => this.setState({ numDiplomas: e.target.value })
+        }),
+        e('label', {
+          htmlFor: 'top_places'
+        }, 'top places'))),
       this.state.tournaments.length ?
         e('ol', {},
           this.state.tournaments.map((url, index) => e(TournamentLine, {
@@ -563,7 +583,8 @@ class TournamentsList extends React.Component {
             key: index,
             onDelete: this.onDelete.bind(this),
             canvas: this.props.canvas,
-            fieldsRef: this.props.fieldsRef
+            fieldsRef: this.props.fieldsRef,
+            numDiplomas: this.state.numDiplomas
           }))
         ) : e('p', {}, "No tournaments"),
     )
@@ -584,8 +605,8 @@ function TournamentLine(props) {
       .then(res => {
         if (res.success) {
           delete res.success;
-          res.date = (new Date(res.startsAt)).toDateString(),
-            setTournament(res);
+          res.date = (new Date(res.startsAt)).toDateString();
+          setTournament(res);
           setLoading({ request: true, loading: false });
         } else {
           alert("Invalid tournament URL")
@@ -608,6 +629,7 @@ function TournamentLine(props) {
       canvas: props.canvas,
       fieldsRef: props.fieldsRef,
       tournament: tournament,
+      numDiplomas: props.numDiplomas
     }))
 }
 
@@ -615,7 +637,7 @@ function DiplomasLine(props) {
   React.useEffect(() => {
     if (!props.fieldsRef.current)
       return;
-    props.tournament.standing.players.forEach(player => {
+    props.tournament.standing.players.slice(0,props.numDiplomas).forEach(player => {
       const canvasElement = document.getElementById(`canvas-${props.tournament.id}-${player.rank}`);
       const canvasObj = new fabric.StaticCanvas(canvasElement);
       canvasObj.setDimensions(
@@ -666,12 +688,12 @@ function DiplomasLine(props) {
       className: 'diploma_download_all',
       onClick: (evt) => {
         evt.preventDefault();
-        props.tournament.standing.players.forEach(player => {
+        props.tournament.standing.players.slice(0, props.numDiplomas).forEach(player => {
           DownloadDiploma(player);
         });
       }
     }, 'Download all'),
-    props.tournament.standing.players.map(player => {
+    props.tournament.standing.players.slice(0, props.numDiplomas).map(player => {
       return e('a', {
         className: "diploma_preview_canvas",
         key: `canvas-${props.tournament.id}-${player.rank}`,

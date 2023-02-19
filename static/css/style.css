@@ -234,6 +234,22 @@ button:disabled {
   min-height: 80px
 }
 
+.tournament_list_controls {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.tournament_list_controls input[type=number] {
+  width: 3em;
+  margin: .3em 1em;
+  padding: 0.2em 1em;
+}
+
+.tournament_list_controls input[type=url] {
+  flex-grow: 100;
+}
+
+
 #canvas_container {
   padding: 5px;
   border: darkgrey solid;
