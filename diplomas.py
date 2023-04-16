@@ -88,7 +88,7 @@ class DiplomaDuplicateHandler(BaseAPIHandler):
         template = table.get((T.user == self.current_user['id']) & (T.id == id))
         if not template:
             raise HTTPError(404, f"No template with id \"{id}\" for user: \"{self.current_user['id']}\"")
-        value = deepcopy(template)
+        value = deepcopy(dict(template))
         value['id'] = token_urlsafe(16)
         value['user'] = self.current_user['id']
         fields_file = f'{value["user"]}-{value["id"]}'
