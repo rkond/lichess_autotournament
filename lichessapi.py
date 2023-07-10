@@ -52,7 +52,7 @@ class LichessAPI():
             token: str,
             method: str,
             **kwargs: Any) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
-        headers: Dict[str, str] = {}
+        headers: Dict[str, str] = {'Accept': 'application/json'}
         body = None
         if kwargs:
             if method == 'GET':
