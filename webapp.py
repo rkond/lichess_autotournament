@@ -22,6 +22,7 @@ from lichessapi import LichessAPI
 from basehandler import BaseHandler, BaseAPIHandler
 from diplomas import DiplomaTemplateHandler, DiplomaDuplicateHandler
 from tournaments import TournamentTemplateHandler, TournamentCreateHandler
+from stats import TournamentStatsHandler
 
 from version import __version__, __revision__
 
@@ -213,6 +214,7 @@ urls: tornado.web._RuleList = [
     (r"/api/v1/tournament/last", TournamentCreateHandler),
     (r"/api/v1/teams", TeamsAPI),
     (r"/api/v1/tournament", TournamentAPI),
+    (r"/api/v1/tournament/stats", TournamentStatsHandler),
 ]
 application = tornado.web.Application(urls, **settings)
 

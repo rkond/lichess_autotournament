@@ -10,7 +10,7 @@ import tornado.auth
 import tornado.escape
 import tornado.options
 
-from tinydb import TinyDB
+from tinydb import TinyDB, Query
 
 from lichessapi import LichessAPI
 
@@ -31,18 +31,26 @@ class BaseHandler(tornado.web.RequestHandler):  # type: ignore[misc]
     async def prepare(self) -> None:
         self.token = (self.get_secure_cookie('t') or b'').decode()
         user = (self.get_secure_cookie('u') or b'').decode()
-
         if self.token:
             try:
                 if user:
                     self._current_user = loads(user)
                     return
-                self._current_user = await self.lichess.get_current_user(self.token)
+                lichess_user = await self.lichess.get_current_user(self.token)
+                users = self.db.table('users')
+                T = Query()
+                current_user = users.get(T.id == lichess_user['id'])
+                if current_user is None:
+                    current_user = lichess_user
+                    users.insert(current_user)
+                else:
+                    users.update(lichess_user, doc_ids=[current_user.doc_id])
+                self._current_user = users.get(T.id == current_user['id'])
+                logging.debug(f'User {self._current_user}')
                 self.set_secure_cookie('u', dumps(self._current_user), 1)
             except Exception as e:
                 logging.warning(f"Cannot get current user: {e}")
                 self.clear_cookie('t')
-                self.clear_cookie('u')
 
     def get_login_url(self) -> str:
         return "/login"
