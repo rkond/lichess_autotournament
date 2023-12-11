@@ -11,7 +11,7 @@ creds = ServiceAccountCreds(scopes=['https://www.googleapis.com/auth/drive'],
                             **service_account_key)
 
 
-async def create_public(title: str) -> Dict[str, Any]:
+async def create_public(title: str, email: str) -> Dict[str, Any]:
     async with Aiogoogle(service_account_creds=creds) as aiogoogle:
 
         sheets = await aiogoogle.discover('sheets', 'v4')
@@ -26,7 +26,7 @@ async def create_public(title: str) -> Dict[str, Any]:
                                      json={
                                          'type': 'user',
                                          'role': 'writer',
-                                         'emailAddress': 'grostik@gmail.com'
+                                         'emailAddress': email
                                      }))
         return spreadsheet
 

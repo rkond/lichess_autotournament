@@ -1,6 +1,7 @@
 import logging
 
-from typing import cast, Any
+from typing import cast, Any, Dict, Optional
+from datetime import datetime
 from json import dumps, loads
 
 import tornado.httpserver
@@ -13,6 +14,8 @@ import tornado.options
 from tinydb import TinyDB, Query
 
 from lichessapi import LichessAPI
+
+from googleapi import create_public, get
 
 
 class BaseHandler(tornado.web.RequestHandler):  # type: ignore[misc]
@@ -69,4 +72,46 @@ class BaseAPIHandler(BaseHandler):
                     message = kwargs['exc_info'][1].log_message
             except Exception:
                 logging.exception('Cannot extract exc_info form error')
-        self.write(dumps({'success': False, 'code': status_code, 'message': message}))
+        self.write(
+            dumps({
+                'success': False,
+                'code': status_code,
+                'message': message
+            }))
+
+    async def get_stat_spreadsheet_for_user(self,
+                                            create_if_absent: bool = False
+                                            ) -> Optional[Dict[str, Any]]:
+        T = Query()
+        spreadsheet = await get(
+            self.current_user['stats_spreadsheet']
+        ) if 'stats_spreadsheet' in self.current_user else None
+        if spreadsheet is None and create_if_absent:
+            spreadsheet = await create_public(
+                f"Lichess autotournament statistics for {self.current_user['id']}",
+                self.current_user['email']
+            )
+            spreadsheetId = spreadsheet['spreadsheetId']
+
+            users = self.db.table('users')
+            users.update({'stats_spreadsheet': spreadsheetId},
+                         T.id == self.current_user['id'])
+            self._current_user.update({'stats_spreadsheet': spreadsheetId})
+            self.set_secure_cookie('u', dumps(self._current_user), 1)
+            logging.info(
+                f"Spreadsheet {spreadsheetId} for {self.current_user['id']} created"
+            )
+        print(self._current_user)
+        if spreadsheet is not None:
+            spreadsheet['lastUpdated'] = self.current_user.get('stats_last_updated')
+        return spreadsheet
+
+    async def on_stats_updated(self) -> str:
+        T = Query()
+        users = self.db.table('users')
+        now = datetime.utcnow().isoformat()
+        users.update({'stats_last_updated': now},
+                     T.id == self.current_user['id'])
+        self._current_user.update({'stats_last_updated': now})
+        self.set_secure_cookie('u', dumps(self._current_user), 1)
+        return now

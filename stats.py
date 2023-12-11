@@ -9,7 +9,7 @@ from tinydb import Query
 import tornado
 
 from basehandler import BaseAPIHandler
-from googleapi import create_public, create_sheet, get, write_values
+from googleapi import create_sheet, write_values
 
 
 def get_tournament_url(tournament: Dict[str, Any]) -> str:
@@ -20,26 +20,10 @@ class TournamentStatsHandler(BaseAPIHandler):
     @tornado.web.authenticated  # type: ignore[misc]
     async def get(self) -> None:
         T = Query()
-        if 'stats_spreadsheet' not in self.current_user or not (
-                spreadsheet := await get(self.current_user['stats_spreadsheet']
-                                         )):
-            spreadsheet = await create_public(
-                f"Lichess autotournament statistics for {self.current_user['id']}"
-            )
-            spreadsheetId = spreadsheet['spreadsheetId']
-            spreadsheetUrl = spreadsheet['spreadsheetUrl']
-            users = self.db.table('users')
-            users.update({'stats_spreadsheet': spreadsheetId},
-                         T.id == self.current_user['id'])
-            self._current_user.update({'stats_spreadsheet': spreadsheetId})
-            self.set_secure_cookie('u', dumps(self._current_user), 1)
-            logging.info(
-                f"Spreadsheet {spreadsheetId} for {self.current_user['id']} created"
-            )
-        else:
-            spreadsheetId = self.current_user['stats_spreadsheet']
+        spreadsheet = await self.get_stat_spreadsheet_for_user(
+            create_if_absent=True)
+        assert spreadsheet is not None
         spreadsheetId = spreadsheet['spreadsheetId']
-        spreadsheetUrl = spreadsheet['spreadsheetUrl']
         now = datetime.utcnow()
         if now.month == 1:
             year = now.year - 1
@@ -51,7 +35,7 @@ class TournamentStatsHandler(BaseAPIHandler):
         logging.debug(f"Tournaments from {startOfLastMonth}")
         table = self.db.table('tournaments')
         tournaments = table.search(
-            (T.user == 'nimven')
+            (T.user == self.current_user['id'])
             & (T.tournament_set == 'default')
             & (T.startTimestamp >= int(startOfLastMonth.timestamp())))
         statsByMonth: Dict[str, Dict[str, Dict[str, Any]]] = {}
@@ -129,5 +113,6 @@ class TournamentStatsHandler(BaseAPIHandler):
                 spreadsheetId,
                 f'{sheetName}!A1:{chr(ord("A") + colsCount - 1)}{rowsCount}',
                 rows)
-
-        self.write(dumps({'spreadsheet': spreadsheetUrl}))
+        spreadsheet['lastUpdated'] = (await
+                                      self.on_stats_updated())
+        self.write(dumps({'spreadsheet': spreadsheet}))

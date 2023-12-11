@@ -145,9 +145,17 @@ class TournamentCreateHandler(BaseAPIHandler):
     async def get(self) -> None:
         T = Query()
         table = self.db.table('tournaments')
-        tournaments = table.search((T.user == self.current_user['id']) & (T.tournament_set == 'default'))
+        tournaments = table.search((T.user == self.current_user['id'])
+                                   & (T.tournament_set == 'default'))
         tournaments.sort(key=lambda t: t.get('created', 0), reverse=True)
-        self.write(dumps({'success': True, 'tournaments': tournaments}))
+        self.write(
+            dumps({
+                'success': True,
+                'tournaments': tournaments,
+                'stats': {
+                    'spreadsheet': await self.get_stat_spreadsheet_for_user()
+                }
+            }))
 
     @staticmethod
     def get_tournament_start(template: Dict[str, Any], week: datetime) -> datetime:

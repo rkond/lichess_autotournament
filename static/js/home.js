@@ -903,6 +903,7 @@ function CreatedTournaments(props) {
   const [tournaments, setTournaments] = React.useState([]);
   const [page, setPage] = React.useState(0);
   const [loading, setLoading] = React.useState({ request: false, loading: true });
+  const [statsSheet, setStatsSheet] = React.useState(undefined)
 
   React.useLayoutEffect(() => {
     if (loading.request)
@@ -917,14 +918,29 @@ function CreatedTournaments(props) {
         if (res.tournaments && res.success) {
           setTournaments(res.tournaments);
         }
+        setStatsSheet(res.stats.spreadsheet)
         setLoading({ request: true, loading: false });
       });
   });
+
+  const generateTournamentStatistics = (event) => {
+    event.preventDefault()
+    setLoading({ request: true, loading: true });
+    fetch(`/api/v1/tournament/stats`, {
+      credentials: 'include',
+    }).then(res => res.json()).then(res => {
+      setLoading({ request: true, loading: false })
+      setStatsSheet(res.spreadsheet)
+    })
+  }
 
   return e('div', {
     className: 'created_tournaments'
   },
     e('h1', {}, "Created tournaments"),
+    e('span', { key: 'stats', className: 'tournament_stats' },
+      statsSheet != null ? [e('a', { key: 'stats', href: statsSheet.spreadsheetUrl, target: 'blank' }, "Statistics spreadsheet"), e('span', { key: 'lastUpdated' }, `Last updated: ${new Date(statsSheet.lastUpdated).toLocaleString()}`)] : "No statistics spreadsheet",
+      loading.loading ? null : e('a', { key: 'statsReload', href: '#', className: 'update_icon', onClick: generateTournamentStatistics })),
     props.errors.length || props.newTournaments.length ? [
       e('h3', { key: 'header' }, "Recently created:"),
       e('ol', {
