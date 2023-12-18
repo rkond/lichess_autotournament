@@ -83,7 +83,7 @@ class TournamentStatsHandler(BaseAPIHandler):
                     cast(
                         List[str], statsByMonth[sheetName][standing['name']]
                         ['wonTournaments']).append(tournament)
-                    if len(tournament['standings']) >= 10:
+                    if len(tournament['standings']['players']) >= 10:
                         statsByMonth[sheetName][
                             standing['name']]['qualifiedWins'] += 1
                 if standing['rank'] <= 3:

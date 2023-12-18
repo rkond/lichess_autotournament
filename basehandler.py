@@ -101,7 +101,6 @@ class BaseAPIHandler(BaseHandler):
             logging.info(
                 f"Spreadsheet {spreadsheetId} for {self.current_user['id']} created"
             )
-        print(self._current_user)
         if spreadsheet is not None:
             spreadsheet['lastUpdated'] = self.current_user.get('stats_last_updated')
         return spreadsheet
