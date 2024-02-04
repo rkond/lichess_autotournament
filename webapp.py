@@ -29,6 +29,8 @@ from version import __version__, __revision__
 base_path = os.path.abspath(os.path.dirname(__file__))
 os.chdir(base_path)
 
+RELEVANT_VARIANTS = ('blitz', 'rapid', 'classical')
+
 
 def get_this_monday(d: datetime) -> datetime:
     monday = d + timedelta(days=-d.weekday())
@@ -67,6 +69,12 @@ class TournamentAPI(BaseAPIHandler):
                     del p['username']
                 tournament['standing'] = {'players': standings}
                 tournament['fullName'] = tournament['name']
+            for player in tournament['standing']['players']:
+                profile = await self.lichess.get_user(self.token, player['name'])
+                player['ratings'] = dict((variant, perf['rating']) for
+                                         (variant, perf) in profile['perfs'].items()
+                                         if 'rating' in perf)
+                player['ratings']['max'] = max(player['ratings'].get(variant, 0) for variant in RELEVANT_VARIANTS)
         tournament['success'] = True
         tournament['type'] = type
         self.write(json.dumps(tournament))
