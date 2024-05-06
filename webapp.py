@@ -71,9 +71,11 @@ class TournamentAPI(BaseAPIHandler):
                 tournament['fullName'] = tournament['name']
             for player in tournament['standing']['players']:
                 profile = await self.lichess.get_user(self.token, player['name'])
-                player['ratings'] = dict((variant, perf['rating']) for
-                                         (variant, perf) in profile['perfs'].items()
-                                         if 'rating' in perf)
+                if 'perfs' not in profile:
+                    player['ratings'] = dict()
+                else:
+                    player['ratings'] = dict((variant, perf['rating']) for (variant, perf) in profile['perfs'].items()
+                                             if 'rating' in perf)
                 player['ratings']['max'] = max(player['ratings'].get(variant, 0) for variant in RELEVANT_VARIANTS)
         tournament['success'] = True
         tournament['type'] = type
