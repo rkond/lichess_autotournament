@@ -359,8 +359,7 @@ class TextField extends React.Component {
   };
 
   static commonSubstitutions = [
-    '${player.profile.firstName}',
-    '${player.profile.lastName}',
+    '${player.profile.realName}',
     '${player.name}',
     '${player.rank}',
     '${player.rating}',
