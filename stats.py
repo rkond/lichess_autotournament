@@ -13,7 +13,7 @@ from googleapi import create_sheet, write_values
 
 
 def get_tournament_url(tournament: Dict[str, Any]) -> str:
-    return f'https://lichess.org/{"tournament" if tournament["system"] == "arena" else  "swiss"}/{tournament["id"]}'
+    return f'https://lichess.org/{"tournament" if tournament.get("system", "swiss") == "arena" else "swiss"}/{tournament["id"]}'
 
 
 class TournamentStatsHandler(BaseAPIHandler):
@@ -68,8 +68,9 @@ class TournamentStatsHandler(BaseAPIHandler):
             if sheetName not in statsByMonth:
                 statsByMonth[sheetName] = {}
             for standing in tournament['standings']['players']:
-                if standing['name'] not in statsByMonth[sheetName]:
-                    statsByMonth[sheetName][standing['name']] = {
+                name = standing.get('name') or standing['username']
+                if name not in statsByMonth[sheetName]:
+                    statsByMonth[sheetName][name] = {
                         'points': 0,
                         'wins': 0,
                         'podiums': 0,
@@ -77,17 +78,17 @@ class TournamentStatsHandler(BaseAPIHandler):
                         'wonTournaments': []
                     }
                 statsByMonth[sheetName][
-                    standing['name']]['points'] += standing['score']
+                    name]['points'] += standing.get('score', standing.get('points'))
                 if standing['rank'] == 1:
-                    statsByMonth[sheetName][standing['name']]['wins'] += 1
+                    statsByMonth[sheetName][name]['wins'] += 1
                     cast(
-                        List[str], statsByMonth[sheetName][standing['name']]
+                        List[str], statsByMonth[sheetName][name]
                         ['wonTournaments']).append(tournament)
                     if len(tournament['standings']['players']) >= 10:
                         statsByMonth[sheetName][
-                            standing['name']]['qualifiedWins'] += 1
+                            name]['qualifiedWins'] += 1
                 if standing['rank'] <= 3:
-                    statsByMonth[sheetName][standing['name']]['podiums'] += 1
+                    statsByMonth[sheetName][name]['podiums'] += 1
         sheets = spreadsheet['sheets']
         for sheetName in statsByMonth:
             if not any(sheet['properties']['title'] == sheetName
@@ -104,7 +105,7 @@ class TournamentStatsHandler(BaseAPIHandler):
                 stats['qualifiedWins'],
                 stats['podiums'],
             ] + [
-                f'=HYPERLINK("{get_tournament_url(tournament)}", "{tournament["fullName"]}")'
+                f'=HYPERLINK("{get_tournament_url(tournament)}", "{tournament.get("fullName", tournament.get("name", tournament.get("id")))}")'
                 for tournament in stats['wonTournaments']
             ] for (playerId, stats) in statsByMonth[sheetName].items())
             rowsCount = len(rows) + 1
