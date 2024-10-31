@@ -41,7 +41,7 @@ class TournamentStatsHandler(BaseAPIHandler):
         statsByMonth: Dict[str, Dict[str, Dict[str, Any]]] = {}
         for tournament in tournaments:
             tournament_type = tournament.get('system', 'swiss')
-            if 'standings' not in tournament:
+            if 'standings' not in tournament or not tournament['standings'].get('players',[]):
                 if tournament_type == 'arena':
                     try:
                         lichess_tournament = await self.lichess.get_tournament(
