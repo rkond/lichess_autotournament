@@ -52,11 +52,16 @@ class TournamentStatsHandler(BaseAPIHandler):
                             f"Tournament was deleted {tournament['id']}")
                         standings = {'players': []}
                 elif tournament_type == 'swiss':
-                    standings = {
-                        'players':
-                        await self.lichess.get_swiss_standings(
-                            self.token, tournament['id'], 10)
-                    }
+                    try:
+                        standings = {
+                            'players':
+                            await self.lichess.get_swiss_standings(
+                                self.token, tournament['id'], 10)
+                        }
+                    except LichessError:
+                        logging.warning(
+                            f"Tournament was deleted {tournament['id']}")
+                        standings = {'players': []}
                 table.update({'standings': standings}, None,
                              [tournament.doc_id])
                 tournament['standings'] = standings

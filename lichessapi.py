@@ -13,10 +13,13 @@ from tornado.httpclient import AsyncHTTPClient
 
 
 class LichessError(RuntimeError):
-    def __init__(self, code: int, message: str, *args: object) -> None:
+    def __init__(self, code: int, message: str, url: str, *args: object) -> None:
         super().__init__(*args)
         self.code = code
         self.message = message
+
+    def __str__(self) -> str:
+        return f'Lichess API error {self.code}: {self.message} at {self.url}'
 
 
 class LichessAPI():
@@ -71,15 +74,15 @@ class LichessAPI():
         if res.code == 200:
             if b'\n' in res.body:
                 return cast(List[Dict[str, Any]], [loads(line) for line in res.body.decode().splitlines()])
-            return cast(Dict[str, Any], loads(res.body.decode()))
+            return cast(Dict[str, Any], loads(res.body.decode())) if len(res.body) > 0 else []
         message = f"Bad Lichess Request: {res.body.decode() if res.body else ''}"
         try:
-            json = loads(res.body.decode())
+            json = loads(res.body.decode()) if len(res.body) > 0 else []
             message = str(json.get('error_description') or json.get('error'))
         except ValueError:
             logging.exception("Error decoding lichess response")
         logging.error(f"Lichess API error: {res.code}, {res.body.decode()}")
-        raise LichessError(res.code, message)
+        raise LichessError(res.code, message, url)
 
     def get_authorize_url(self,  scope: List[str], state: Optional[str] = None) -> Tuple[str, str]:
         code_verifier = token_urlsafe(64)
