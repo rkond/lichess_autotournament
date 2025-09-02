@@ -41,12 +41,17 @@ class TournamentStatsHandler(BaseAPIHandler):
         statsByMonth: Dict[str, Dict[str, Dict[str, Any]]] = {}
         for tournament in tournaments:
             tournament_type = tournament.get('system', 'swiss')
-            if 'standings' not in tournament or not tournament['standings'].get('players',[]):
+            if 'standings' not in tournament or not tournament['standings'].get('players', []):
                 if tournament_type == 'arena':
                     try:
                         lichess_tournament = await self.lichess.get_tournament(
                             self.token, tournament_type, tournament['id'])
-                        standings = lichess_tournament['standing']
+                        if lichess_tournament is None:
+                            logging.warning(
+                                f"Tournament was deleted {tournament['id']}")
+                            standings = {'players': []}
+                        else:
+                            standings = lichess_tournament['standing']
                     except LichessError:
                         logging.warning(
                             f"Tournament was deleted {tournament['id']}")
@@ -55,8 +60,8 @@ class TournamentStatsHandler(BaseAPIHandler):
                     try:
                         standings = {
                             'players':
-                            await self.lichess.get_swiss_standings(
-                                self.token, tournament['id'], 10)
+                            (await self.lichess.get_swiss_standings(
+                                self.token, tournament['id'], 10)) or []
                         }
                     except LichessError:
                         logging.warning(
