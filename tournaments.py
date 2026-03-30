@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 try:
     from backports.zoneinfo import ZoneInfo  # type: ignore[import]
@@ -32,7 +32,7 @@ def convert_clock_time(seconds: int) -> str:
 def convert_start_date(startDate: Union[int, Dict[str, Union[int, str]]]) -> Dict[str, Union[int, str]]:
     if isinstance(startDate, dict):
         return startDate
-    startDateTimestamp = datetime.utcfromtimestamp(startDate)
+    startDateTimestamp = datetime.fromtimestamp(startDate, timezone.utc)
     return {
         'weekday': startDateTimestamp.weekday(),
         'wall_time': startDateTimestamp.strftime('%H:%M'),
@@ -158,25 +158,26 @@ class TournamentCreateHandler(BaseAPIHandler):
             }))
 
     @staticmethod
-    def get_tournament_start(template: Dict[str, Any], week: datetime) -> datetime:
+    def get_tournament_start(template: Dict[str, Any], week: float):
         start_date_data = convert_start_date(template['startDate'])
+        tz = ZoneInfo(cast(str, start_date_data['timezone']))
         wall_time = datetime.strptime(cast(str, start_date_data['wall_time']), "%H:%M")
-        tournament_day = (week + timedelta(days=cast(int, start_date_data['weekday']))).date()
+        monday_in_tz = get_this_monday(datetime.fromtimestamp(week, tz))
+        tournament_day = monday_in_tz + timedelta(days=cast(int, start_date_data['weekday']))
+
         return datetime(
             year=tournament_day.year,
             month=tournament_day.month,
             day=tournament_day.day,
             hour=wall_time.hour,
             minute=wall_time.minute,
-            tzinfo=ZoneInfo(cast(str, start_date_data['timezone'])))
+            tzinfo=tz).replace(tzinfo=tz)
 
     @tornado.web.authenticated  # type: ignore[misc]
     async def post(self) -> None:
         request = {}
-        week = None
         try:
             request = loads(self.request.body.decode())
-            week = get_this_monday(datetime.utcfromtimestamp(cast(float, request.get('week'))))
         except ValueError:
             raise HTTPError(400, "Invalid JSON")
 
@@ -195,8 +196,8 @@ class TournamentCreateHandler(BaseAPIHandler):
             template = dict(_t)
             id = template.get('id', 'Unknown template')
             try:
-                tournamentStart = self.get_tournament_start(template, week)
-                if tournamentStart <= datetime.utcnow().astimezone(tournamentStart.tzinfo):
+                tournamentStart = self.get_tournament_start(template, cast(float, request.get('week')))
+                if tournamentStart <= datetime.now(timezone.utc).astimezone(tournamentStart.tzinfo):
                     if not errors.get(id):
                         errors[id] = []
                     errors[id].append(f"Cannot create tournament {template['name']} as it would start in the past")
@@ -223,7 +224,7 @@ class TournamentCreateHandler(BaseAPIHandler):
                 if template.get('type') == 'arena':
                     template['startDate'] = int(tournamentStart.timestamp())*1000
                 elif template.get('type') == 'swiss':
-                    if tournamentStart <= datetime.utcnow().astimezone(tournamentStart.tzinfo):
+                    if tournamentStart <= datetime.now(timezone.utc).astimezone(tournamentStart.tzinfo):
                         if not errors.get(id):
                             errors[id] = []
                         errors[id].append(f"Cannot create tournament {template['name']} as it would start in the past")
