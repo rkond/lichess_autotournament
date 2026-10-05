@@ -143,7 +143,7 @@ class LoginHandler(BaseHandler):
     async def get(self) -> None:
         if not self.get_argument('code', None):
             auth_url, code_verifier = self.lichess.get_authorize_url(
-                scope=['tournament:write', 'email:read'],
+                scope=['tournament:write', 'email:read', 'team:read'],
                 state=self.get_argument('next', '/')
             )
             self.set_secure_cookie('cv', code_verifier)
